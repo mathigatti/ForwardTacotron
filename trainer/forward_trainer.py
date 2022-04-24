@@ -149,8 +149,8 @@ class ForwardTrainer:
         batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device) + batch['mel'].mean() * (1. - mel_zoneout_mask.to(device).float())
 
         pred = model(batch)
-        m1_hat = np_now(pred['mel'])[0, :600, :]
-        m_target = np_now(batch['mel'])[0, :600, :]
+        m1_hat = np_now(pred['mel'])[0, :, :600]
+        m_target = np_now(batch['mel'])[0, :, :600]
 
         m1_hat_fig = plot_mel(m1_hat)
         m_target_fig = plot_mel(m_target)
