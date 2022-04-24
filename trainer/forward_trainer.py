@@ -151,6 +151,7 @@ class ForwardTrainer:
         pred = model(batch)
         m1_hat = np_now(pred['mel'])[0, :, :600]
         m_target = np_now(batch['mel'])[0, :, :600]
+        m_target_in = np_now(batch['mel_in'])[0, :, :600]
 
         m1_hat_fig = plot_mel(m1_hat)
         m_target_fig = plot_mel(m_target)
@@ -159,10 +160,14 @@ class ForwardTrainer:
         self.writer.add_figure('Ground_Truth_Aligned/linear', m1_hat_fig, model.step)
 
         m1_hat_wav = self.dsp.griffinlim(m1_hat)
+        target_in_wav = self.dsp.griffinlim(m_target_in)
         target_wav = self.dsp.griffinlim(m_target)
 
         self.writer.add_audio(
             tag='Generated/target_wav', snd_tensor=target_wav,
+            global_step=model.step, sample_rate=self.dsp.sample_rate)
+        self.writer.add_audio(
+            tag='Generated/target_in_wav', snd_tensor=target_in_wav,
             global_step=model.step, sample_rate=self.dsp.sample_rate)
         self.writer.add_audio(
             tag='Generated/postnet_wav', snd_tensor=m1_hat_wav,
