@@ -158,4 +158,14 @@ class ForwardTrainer:
         self.writer.add_figure('Ground_Truth_Aligned/target', m_target_fig, model.step)
         self.writer.add_figure('Ground_Truth_Aligned/linear', m1_hat_fig, model.step)
 
+        m1_hat_wav = self.dsp.griffinlim(m1_hat)
+        target_wav = self.dsp.griffinlim(m_target)
+
+        self.writer.add_audio(
+            tag='Generated/target_wav', snd_tensor=target_wav,
+            global_step=model.step, sample_rate=self.dsp.sample_rate)
+        self.writer.add_audio(
+            tag='Generated/postnet_wav', snd_tensor=m1_hat_wav,
+            global_step=model.step, sample_rate=self.dsp.sample_rate)
+
 
