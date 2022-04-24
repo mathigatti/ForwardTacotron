@@ -75,7 +75,7 @@ class ForwardTrainer:
 
                 B, N, T = batch['mel'].size()
                 mel_zoneout_mask = torch.rand((B, 1, T)) > 0.3
-                batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device)
+                batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device) + batch['mel'].mean() * (1. - mel_zoneout_mask.to(device).float())
                 pred = model(batch)
 
                 m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
@@ -128,7 +128,7 @@ class ForwardTrainer:
             batch = to_device(batch, device=device)
             B, N, T = batch['mel'].size()
             mel_zoneout_mask = torch.rand((B, 1, T)) > 0.3
-            batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device)
+            batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device) + batch['mel'].mean() * (1. - mel_zoneout_mask.to(device).float())
 
             with torch.no_grad():
                 pred = model(batch)
@@ -146,7 +146,7 @@ class ForwardTrainer:
         B, N, T = batch['mel'].size()
         mel_zoneout_mask = torch.rand((B, 1, T)) > 0.3
         batch = to_device(batch, device=device)
-        batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device)
+        batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device) + batch['mel'].mean() * (1. - mel_zoneout_mask.to(device).float())
 
         pred = model(batch)
         m1_hat = np_now(pred['mel'])[0, :600, :]
