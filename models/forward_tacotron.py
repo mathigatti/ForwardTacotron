@@ -147,7 +147,8 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        mel = self.denoiser(mel)
+        mel = self.postnet(mel)
+        mel = self.post_proj(mel).transpose(1, 2)
 
         return {'mel': mel}
 
