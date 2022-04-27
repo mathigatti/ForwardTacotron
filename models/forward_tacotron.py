@@ -6,9 +6,33 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Embedding
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
+from torch.nn import Embedding, LayerNorm, MultiheadAttention
 
 from models.common_layers import CBHG, LengthRegulator
 from utils.text.symbols import phonemes
+
+
+class FFTBlock(nn.Module):
+
+    def __init__(self,
+                 d_model: int,
+                 nhead: int,
+                 conv1_kernel: int,
+                 conv2_kernel: int,
+                 d_fft: int,
+                 dropout: float = 0.1):
+        super(FFTBlock, self).__init__()
+        self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
+        self.conv1 = nn.Conv1d(in_channels=d_model, out_channels=d_fft,
+                               kernel_size=conv1_kernel, stride=1, padding=conv1_kernel//2)
+        self.conv2 = nn.Conv1d(in_channels=d_fft, out_channels=d_model,
+                               kernel_size=conv2_kernel, stride=1, padding=conv2_kernel//2)
+        self.norm1 = LayerNorm(d_model)
+        self.norm2 = LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.activation = torch.nn.ReLU()
 
 
 class SeriesPredictor(nn.Module):
@@ -127,6 +151,9 @@ class ForwardTacotron(nn.Module):
         self.pitch_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
         self.energy_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
 
+        self.mel_query = nn.Linear(80, embed_dims)
+        self.mel_att = MultiheadAttention(embed_dims, 1, dropout=0.1)
+
     def __repr__(self):
         num_params = sum([np.prod(p.size()) for p in self.parameters()])
         return f'ForwardTacotron, num params: {num_params}'
@@ -147,6 +174,12 @@ class ForwardTacotron(nn.Module):
         energy_hat = self.energy_pred(x).transpose(1, 2)
 
         x = self.embedding(x)
+
+        mel_query = self.mel_query(mel)
+        mel_att = self.mel_att(quere=mel_query, key=x, value=x)
+
+
+
         x = x.transpose(1, 2)
         x = self.prenet(x)
 

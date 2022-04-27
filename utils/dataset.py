@@ -267,13 +267,22 @@ class ForwardDataset(Dataset):
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
 
         dur_hat = dur.copy()
+        pitch_hat = pitch.copy()
         text = self.tokenizer.decode([int(t) for t in x])
         for i, (t, d) in enumerate(zip(text, dur_hat[:])):
             if t == ',' and i < len(dur_hat) - 1:
-                dur_hat[i+1] = max(dur_hat[i+1], 25)
+                dur_hat[i+1] = max(dur_hat[i+1], 15)
+        if text.endswith('?'):
+            if pitch_hat[-3] - pitch_hat[-4] < 0.5:
+                pitch_hat[-3] = pitch_hat[-4] + 0.5
+            if pitch_hat[-2] - pitch_hat[-3] < 0.5:
+                pitch_hat[-2] = pitch_hat[-3] + 0.5
+            if pitch_hat[-1] - pitch_hat[-2] < 1:
+                pitch_hat[-1] = pitch_hat[-2] + 1
 
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
-                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy, 'dur_hat': dur_hat}
+                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy,
+                'dur_hat': dur_hat, 'pitch_hat': pitch_hat}
 
     def __len__(self):
         return len(self.metadata)
@@ -305,7 +314,11 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     mel_lens = [b['mel_len'] for b in batch]
     mel_lens = torch.tensor(mel_lens)
 
-    dur, pitch, energy, dur_hat = None, None, None, None
+    dur, pitch, energy, dur_hat, pitch_hat = None, None, None, None, None
+    if 'pitch_hat' in batch[0]:
+        pitch_hat = [pad1d(b['pitch_hat'][:max_x_len], max_x_len) for b in batch]
+        pitch_hat = np.stack(pitch_hat)
+        pitch_hat = torch.tensor(pitch_hat).float()
     if 'dur_hat' in batch[0]:
         dur_hat = [pad1d(b['dur_hat'][:max_x_len], max_x_len) for b in batch]
         dur_hat = np.stack(dur_hat)
@@ -325,7 +338,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
             'mel_len': mel_lens, 'dur': dur, 'pitch': pitch,
-            'energy': energy, 'dur_hat': dur_hat}
+            'energy': energy, 'dur_hat': dur_hat, 'pitch_hat': pitch_hat}
 
 
 class BinnedLengthSampler(Sampler):
