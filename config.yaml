@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_sil_25_tts'
+tts_model_id: 'bild_sil_15_pitch_tts'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
@@ -76,8 +76,8 @@ tacotron:
 forward_tacotron:
 
   model:
-    embed_dims: 256                 # embedding dimension for main model
-    series_embed_dims: 64           # embedding dimension for series predictor
+    embed_dims: 512                 # embedding dimension for main model
+    series_embed_dims: 512           # embedding dimension for series predictor
 
     durpred_conv_dims: 256
     durpred_rnn_dims: 64
@@ -94,7 +94,7 @@ forward_tacotron:
     energy_strength: 0.             # set to 0 if you want no energy conditioning
 
     prenet_dims: 256
-    prenet_k: 16
+    prenet_k: 8
     prenet_dropout: 0.5
     prenet_num_highways: 4
 
@@ -103,7 +103,7 @@ forward_tacotron:
     postnet_dims: 256
     postnet_k: 8
     postnet_num_highways: 4
-    postnet_dropout: 0.
+    postnet_dropout: 0.5
 
   training:
     schedule:
