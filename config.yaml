@@ -53,7 +53,7 @@ tacotron:
     encoder_dims: 128
     decoder_dims: 256
     postnet_dims: 128
-    encoder_k: 16
+    encoder_k: 3
     lstm_dims: 512
     postnet_k: 8
     num_highways: 4
