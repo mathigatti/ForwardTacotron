@@ -18,6 +18,7 @@ from utils.duration_extraction import extract_durations_per_count, extract_durat
 from utils.files import pickle_binary, unpickle_binary, read_config
 from utils.metrics import attention_score
 from utils.paths import Paths
+from utils.text.tokenizer import Tokenizer
 
 
 def normalize_values(phoneme_val):
@@ -56,7 +57,7 @@ def extract_pitch_energy(save_path_pitch: Path,
             values = values[np.where(values < pitch_max_freq)[0]]
             pitch_char[idx] = np.mean(values) if len(values) > 0 else 0.0
             energy_values = energy[a:b]
-            energy_char[idx] = np.mean(energy_values)if len(energy_values) > 0 else 0.0
+            energy_char[idx] = np.mean(energy_values) if len(energy_values) > 0 else 0.0
         phoneme_pitches.append((item_id, pitch_char))
         phoneme_energies.append((item_id, energy_char))
         bar = progbar(prog_idx, len(all_data))
@@ -118,19 +119,53 @@ def create_align_features(model: Tacotron,
 
     for i, batch in enumerate(dataset, 1):
         batch = to_device(batch, device=device)
+        model.decoder.prenet.train()
+        x_in = batch['x'].repeat(256, 1)
+        mel_in = batch['mel'].repeat(256, 1, 1)
         with torch.no_grad():
-            _, _, att_batch = model(batch['x'], batch['mel'])
+            _, _, att_batch_tile = model(x_in, mel_in)
+
+        sil_mask = batch['mel'][0].mean(dim=0)
+
+        att_batch = att_batch_tile.mean(0).unsqueeze(0)
+        att_batch_i = att_batch_tile[0:1, :, :]
         align_score, sharp_score = attention_score(att_batch, batch['mel_len'], r=1)
         att_batch = np_now(att_batch)
-        seq, att, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
+        seq, att_orig, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
+        seq_i, att_i, mel_len_i, item_id_i = batch['x'][0], att_batch_i[0], batch['mel_len'][0], batch['item_id'][0]
         align_score, sharp_score = float(align_score[0]), float(sharp_score[0])
         att_score_dict[item_id] = (align_score, sharp_score)
-        durs = dur_extraction_func(seq, att, mel_len)
+
+        att = att_orig.copy()
+        durs = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=None)
+        att = att_orig.copy()
+        durs_2 = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=sil_mask)
+
+        text = Tokenizer().decode([int(c) for c in seq])
+        print()
+        print(item_id, sharp_score)
+        print(text)
+
+        for t, d, d2 in zip(text, durs, durs_2):
+            print(t, d, d2)
+
+        print('sharp score:', sharp_score)
+        if np.sum(durs) != mel_len:
+            print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
+        np.save(str(paths.alg / f'{item_id}.npy'), durs_2, allow_pickle=False)
+
+
+
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
         np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
+        plot_attention(att)
+        plt.savefig(f'/tmp/att/{item_id}_avg.png')
+        plot_attention(att_i)
+        plt.savefig(f'/tmp/att/{item_id}.png')
+
         stream(msg)
     pickle_binary(att_score_dict, paths.data / 'att_score_dict.pkl')
     print('Extracting Pitch Values...')
