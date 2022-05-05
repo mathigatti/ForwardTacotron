@@ -13,7 +13,7 @@ class Encoder(nn.Module):
     def __init__(self, embed_dims, num_chars, cbhg_channels, K, num_highways, dropout):
         super().__init__()
         self.embedding = nn.Embedding(num_chars, embed_dims)
-        self.conv = nn.Conv1d(embed_dims, 2*cbhg_channels, 3)
+        self.conv = nn.Conv1d(embed_dims, 2*cbhg_channels, 3, padding=1)
         #self.pre_net = PreNet(embed_dims)
         #self.cbhg = CBHG(K=K, in_channels=cbhg_channels, channels=cbhg_channels,
         #                 proj_channels=[cbhg_channels, cbhg_channels],

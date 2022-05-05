@@ -60,7 +60,9 @@ def extract_durations_with_dijkstra(seq: np.array,
     top left to bottom right.
     """
 
+
     if sil_mask is not None:
+        print(mel_len, att.shape, sil_mask.shape, len(seq))
         for i in range(mel_len):
             if sil_mask[i] < -11:
                 for j in range(len(seq)):
