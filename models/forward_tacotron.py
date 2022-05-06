@@ -48,7 +48,7 @@ class PhonPredictor(nn.Module):
         super().__init__()
         self.conv1 = BatchNormConv(80, 256, 3, relu=True)
         self.conv2 = BatchNormConv(256, 256, 3, relu=True)
-        self.lin = Linear(256, 4)
+        self.lin = Linear(256, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv1(x)
@@ -116,8 +116,8 @@ class ForwardTacotron(nn.Module):
                                          out_dim=4)
 
         self.phon_train_pred = PhonPredictor()
-        self.phon_lin = Linear(4, embed_dims)
-        self.phon_series_lin = Linear(4, series_embed_dims)
+        self.phon_lin = Linear(1, embed_dims)
+        self.phon_series_lin = Linear(1, series_embed_dims)
 
         self.dur_pred = SeriesPredictor(num_chars=num_chars,
                                         emb_dim=series_embed_dims,
