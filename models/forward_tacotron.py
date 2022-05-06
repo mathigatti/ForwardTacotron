@@ -137,7 +137,7 @@ class ForwardTacotron(nn.Module):
             t1 = 0
             for t in range(T):
                 t2 = t1 + int(dur[b, t])
-                avg = torch.exp(mel[b, :, t1:t2].mean(dim=1))
+                avg = torch.exp(mel[b, :, t1:t2]).mean(dim=1)
                 avg = avg / avg.mean()
                 mel_avg[b, :, t] = avg
                 t1 = t2
