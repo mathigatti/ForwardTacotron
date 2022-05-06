@@ -107,11 +107,11 @@ class ForwardTacotron(nn.Module):
         self.encoder = Sequential(
             nn.Conv1d(80, 256, 3, padding=1),
             nn.Conv1d(256, 32, 3, padding=1),
-            nn.Conv1d(32, 1, 3, padding=1)
+            nn.Conv1d(32, 4, 3, padding=1)
         )
 
         self.decoder = Sequential(
-            nn.ConvTranspose1d(1, 32, 3, padding=1),
+            nn.ConvTranspose1d(4, 32, 3, padding=1),
             nn.ConvTranspose1d(32, 256, 3, padding=1),
             nn.Conv1d(256, 80, 3, padding=1),
         )
@@ -146,7 +146,7 @@ class ForwardTacotron(nn.Module):
         pitch_pred = self.encoder(mel_avg)
         mel_pred = self.decoder(pitch_pred)
 
-        return {'mel_avg': mel_avg, 'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
+        return {'mel_avg': mel_avg, 'pitch_pred': pitch_pred.mean(dim=-1).unsqueeze(-1), 'mel_pred': mel_pred}
 
     def generate(self,
                  x: torch.Tensor,
