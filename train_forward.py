@@ -43,7 +43,7 @@ def create_gta_features(model: Tacotron,
 
         with torch.no_grad():
             pred = model(batch)
-        gta = pred['mel_post'].cpu().numpy()
+        gta = pred['pitch'].cpu().numpy()
         for j, item_id in enumerate(batch['item_id']):
             mel = gta[j][:, :batch['mel_len'][j]]
             np.save(str(save_path/f'{item_id}.npy'), mel, allow_pickle=False)
@@ -82,9 +82,9 @@ if __name__ == '__main__':
     if force_gta:
         print('Creating Ground Truth Aligned Dataset...\n')
         train_set, val_set = get_tts_datasets(
-            paths.data, 8, r=1, model_type='forward',
+            paths.data, 1, r=1, model_type='forward',
             filter_attention=False, max_mel_len=None)
-        create_gta_features(model, train_set, val_set, paths.gta)
+        create_gta_features(model, train_set, val_set, paths.raw_pitch_pred)
         print('\n\nYou can now train WaveRNN on GTA features - use python train_wavernn.py --gta\n')
     else:
         trainer = ForwardTrainer(paths=paths, dsp=dsp, config=config)

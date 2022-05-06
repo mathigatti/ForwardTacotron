@@ -14,6 +14,7 @@ class Paths:
         self.gta = self.data/'gta'
         self.alg = self.data/'alg'
         self.raw_pitch = self.data/'raw_pitch'
+        self.raw_pitch_pred = self.data/'raw_pitch_pred'
         self.phon_pitch = self.data/'phon_pitch'
         self.phon_energy = self.data/'phon_energy'
 
@@ -38,6 +39,7 @@ class Paths:
         os.makedirs(self.gta, exist_ok=True)
         os.makedirs(self.alg, exist_ok=True)
         os.makedirs(self.raw_pitch, exist_ok=True)
+        os.makedirs(self.raw_pitch_pred, exist_ok=True)
         os.makedirs(self.phon_pitch, exist_ok=True)
         os.makedirs(self.phon_energy, exist_ok=True)
         os.makedirs(self.voc_checkpoints, exist_ok=True)
