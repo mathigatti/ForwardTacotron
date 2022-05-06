@@ -15,9 +15,8 @@ class SeriesPredictor(nn.Module):
 
     def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
-        self.embedding = Embedding(num_chars, emb_dim)
         self.convs = torch.nn.ModuleList([
-            BatchNormConv(emb_dim, conv_dims, 5, relu=True),
+            BatchNormConv(80, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
         ])
@@ -28,8 +27,6 @@ class SeriesPredictor(nn.Module):
     def forward(self,
                 x: torch.Tensor,
                 alpha: float = 1.0) -> torch.Tensor:
-        x = self.embedding(x)
-        x = x.transpose(1, 2)
         for conv in self.convs:
             x = conv(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
@@ -88,44 +85,13 @@ class ForwardTacotron(nn.Module):
         self.padding_value = padding_value
         self.embedding = nn.Embedding(num_chars, embed_dims)
         self.lr = LengthRegulator()
-        self.dur_pred = SeriesPredictor(num_chars=num_chars,
-                                        emb_dim=series_embed_dims,
-                                        conv_dims=durpred_conv_dims,
-                                        rnn_dims=durpred_rnn_dims,
-                                        dropout=durpred_dropout)
         self.pitch_pred = SeriesPredictor(num_chars=num_chars,
                                           emb_dim=series_embed_dims,
                                           conv_dims=pitch_conv_dims,
                                           rnn_dims=pitch_rnn_dims,
                                           dropout=pitch_dropout)
-        self.energy_pred = SeriesPredictor(num_chars=num_chars,
-                                           emb_dim=series_embed_dims,
-                                           conv_dims=energy_conv_dims,
-                                           rnn_dims=energy_rnn_dims,
-                                           dropout=energy_dropout)
-        self.prenet = CBHG(K=prenet_k,
-                           in_channels=embed_dims,
-                           channels=prenet_dims,
-                           proj_channels=[prenet_dims, embed_dims],
-                           num_highways=prenet_num_highways,
-                           dropout=prenet_dropout)
-        self.lstm = nn.LSTM(2 * prenet_dims,
-                            rnn_dims,
-                            batch_first=True,
-                            bidirectional=True)
-        self.lin = torch.nn.Linear(2 * rnn_dims, n_mels)
-        self.register_buffer('step', torch.zeros(1, dtype=torch.long))
-        self.postnet = CBHG(K=postnet_k,
-                            in_channels=n_mels,
-                            channels=postnet_dims,
-                            proj_channels=[postnet_dims, n_mels],
-                            num_highways=postnet_num_highways,
-                            dropout=postnet_dropout)
-        self.post_proj = nn.Linear(2 * postnet_dims, n_mels, bias=False)
-        self.pitch_strength = pitch_strength
-        self.energy_strength = energy_strength
         self.pitch_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
-        self.energy_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
+        self.register_buffer('step', torch.zeros(1, dtype=torch.long))
 
     def __repr__(self):
         num_params = sum([np.prod(p.size()) for p in self.parameters()])
@@ -142,43 +108,9 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        dur_hat = self.dur_pred(x).squeeze(-1)
-        pitch_hat = self.pitch_pred(x).transpose(1, 2)
-        energy_hat = self.energy_pred(x).transpose(1, 2)
+        pitch_hat = self.pitch_pred(mel).transpose(1, 2)
 
-        x = self.embedding(x)
-        x = x.transpose(1, 2)
-        x = self.prenet(x)
-
-        pitch_proj = self.pitch_proj(pitch)
-        pitch_proj = pitch_proj.transpose(1, 2)
-        x = x + pitch_proj * self.pitch_strength
-
-        energy_proj = self.energy_proj(energy)
-        energy_proj = energy_proj.transpose(1, 2)
-        x = x + energy_proj * self.energy_strength
-
-        x = self.lr(x, dur)
-
-        x = pack_padded_sequence(x, lengths=mel_lens.cpu(), enforce_sorted=False,
-                                 batch_first=True)
-
-        x, _ = self.lstm(x)
-
-        x, _ = pad_packed_sequence(x, padding_value=self.padding_value, batch_first=True)
-
-        x = self.lin(x)
-        x = x.transpose(1, 2)
-
-        x_post = self.postnet(x)
-        x_post = self.post_proj(x_post)
-        x_post = x_post.transpose(1, 2)
-
-        x_post = self._pad(x_post, mel.size(2))
-        x = self._pad(x, mel.size(2))
-
-        return {'mel': x, 'mel_post': x_post,
-                'dur': dur_hat, 'pitch': pitch_hat, 'energy': energy_hat}
+        return {'mel': x, 'pitch': pitch_hat}
 
     def generate(self,
                  x: torch.Tensor,

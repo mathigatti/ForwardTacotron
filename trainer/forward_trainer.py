@@ -73,27 +73,13 @@ class ForwardTrainer:
                 start = time.time()
                 model.train()
 
-                pitch_zoneout_mask = torch.rand(batch['x'].size()) > self.train_cfg['pitch_zoneout']
-                energy_zoneout_mask = torch.rand(batch['x'].size()) > self.train_cfg['energy_zoneout']
-
                 pitch_target = batch['pitch'].detach().clone()
-                energy_target = batch['energy'].detach().clone()
-                batch['pitch'] = batch['pitch'] * pitch_zoneout_mask.to(device).float()
-                batch['energy'] = batch['energy'] * energy_zoneout_mask.to(device).float()
 
                 pred = model(batch)
 
-                m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
-                m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
+                pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['mel_len'])
 
-                dur_loss = self.l1_loss(pred['dur'].unsqueeze(1), batch['dur'].unsqueeze(1), batch['x_len'])
-                pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['x_len'])
-                energy_loss = self.l1_loss(pred['energy'], energy_target.unsqueeze(1), batch['x_len'])
-
-                loss = m1_loss + m2_loss \
-                       + self.train_cfg['dur_loss_factor'] * dur_loss \
-                       + self.train_cfg['pitch_loss_factor'] * pitch_loss \
-                       + self.train_cfg['energy_loss_factor'] * energy_loss
+                loss = pitch_loss
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -101,8 +87,6 @@ class ForwardTrainer:
                                                self.train_cfg['clip_grad_norm'])
                 optimizer.step()
 
-                m_loss_avg.add(m1_loss.item() + m2_loss.item())
-                dur_loss_avg.add(dur_loss.item())
                 step = model.get_step()
                 k = step // 1000
 
@@ -121,20 +105,15 @@ class ForwardTrainer:
                 if step % self.train_cfg['plot_every'] == 0:
                     self.generate_plots(model, session)
 
-                self.writer.add_scalar('Mel_Loss/train', m1_loss + m2_loss, model.get_step())
                 self.writer.add_scalar('Pitch_Loss/train', pitch_loss, model.get_step())
-                self.writer.add_scalar('Energy_Loss/train', energy_loss, model.get_step())
-                self.writer.add_scalar('Duration_Loss/train', dur_loss, model.get_step())
+
                 self.writer.add_scalar('Params/batch_size', session.bs, model.get_step())
                 self.writer.add_scalar('Params/learning_rate', session.lr, model.get_step())
 
                 stream(msg)
 
-            val_out = self.evaluate(model, session.val_set)
-            self.writer.add_scalar('Mel_Loss/val', val_out['mel_loss'], model.get_step())
-            self.writer.add_scalar('Duration_Loss/val', val_out['dur_loss'], model.get_step())
-            self.writer.add_scalar('Pitch_Loss/val', val_out['pitch_loss'], model.get_step())
-            self.writer.add_scalar('Energy_Loss/val', val_out['energy_loss'], model.get_step())
+            #val_out = self.evaluate(model, session.val_set)
+            #self.writer.add_scalar('Pitch_Loss/val', val_out['pitch_loss'], model.get_step())
             save_checkpoint(model=model, optim=optimizer, config=self.config,
                             path=self.paths.forward_checkpoints / 'latest_model.pt')
 
@@ -178,57 +157,8 @@ class ForwardTrainer:
         batch = to_device(batch, device=device)
 
         pred = model(batch)
-        m1_hat = np_now(pred['mel'])[0, :600, :]
-        m2_hat = np_now(pred['mel_post'])[0, :600, :]
-        m_target = np_now(batch['mel'])[0, :600, :]
-
-        m1_hat_fig = plot_mel(m1_hat)
-        m2_hat_fig = plot_mel(m2_hat)
-        m_target_fig = plot_mel(m_target)
         pitch_fig = plot_pitch(np_now(batch['pitch'][0]))
         pitch_gta_fig = plot_pitch(np_now(pred['pitch'].squeeze()[0]))
-        energy_fig = plot_pitch(np_now(batch['energy'][0]))
-        energy_gta_fig = plot_pitch(np_now(pred['energy'].squeeze()[0]))
 
         self.writer.add_figure('Pitch/target', pitch_fig, model.step)
         self.writer.add_figure('Pitch/ground_truth_aligned', pitch_gta_fig, model.step)
-        self.writer.add_figure('Energy/target', energy_fig, model.step)
-        self.writer.add_figure('Energy/ground_truth_aligned', energy_gta_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/target', m_target_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/linear', m1_hat_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/postnet', m2_hat_fig, model.step)
-
-        m2_hat_wav = self.dsp.griffinlim(m2_hat)
-        target_wav = self.dsp.griffinlim(m_target)
-
-        self.writer.add_audio(
-            tag='Ground_Truth_Aligned/target_wav', snd_tensor=target_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-        self.writer.add_audio(
-            tag='Ground_Truth_Aligned/postnet_wav', snd_tensor=m2_hat_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-
-        gen = model.generate(batch['x'][0:1, :batch['x_len'][0]])
-        m1_hat = np_now(gen['mel'].squeeze())
-        m2_hat = np_now(gen['mel_post'].squeeze())
-
-        m1_hat_fig = plot_mel(m1_hat)
-        m2_hat_fig = plot_mel(m2_hat)
-
-        pitch_gen_fig = plot_pitch(np_now(gen['pitch'].squeeze()))
-        energy_gen_fig = plot_pitch(np_now(gen['energy'].squeeze()))
-
-        self.writer.add_figure('Pitch/generated', pitch_gen_fig, model.step)
-        self.writer.add_figure('Energy/generated', energy_gen_fig, model.step)
-        self.writer.add_figure('Generated/target', m_target_fig, model.step)
-        self.writer.add_figure('Generated/linear', m1_hat_fig, model.step)
-        self.writer.add_figure('Generated/postnet', m2_hat_fig, model.step)
-
-        m2_hat_wav = self.dsp.griffinlim(m2_hat)
-
-        self.writer.add_audio(
-            tag='Generated/target_wav', snd_tensor=target_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-        self.writer.add_audio(
-            tag='Generated/postnet_wav', snd_tensor=m2_hat_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
