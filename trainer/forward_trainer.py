@@ -73,11 +73,12 @@ class ForwardTrainer:
                 start = time.time()
                 model.train()
 
-                pitch_target = batch['pitch'].detach().clone()
+                pitch_target = batch['pitch'].detach().clone().unsqueeze(1)
 
                 pred = model(batch)
 
-                pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['mel_len'])
+                pred['pitch'][pitch_target == 0] = 0
+                pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
 
                 loss = pitch_loss
 
