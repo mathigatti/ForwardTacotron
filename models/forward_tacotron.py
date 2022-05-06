@@ -103,60 +103,17 @@ class ForwardTacotron(nn.Module):
                  n_mels: int,
                  padding_value=-11.5129):
         super().__init__()
-        self.rnn_dims = rnn_dims
-        self.padding_value = padding_value
-        self.embedding = nn.Embedding(num_chars, embed_dims)
-        self.lr = LengthRegulator()
 
-        self.phon_pred = SeriesPredictor(num_chars=num_chars,
-                                         emb_dim=series_embed_dims,
-                                         conv_dims=pitch_conv_dims,
-                                         rnn_dims=pitch_rnn_dims,
-                                         dropout=pitch_dropout,
-                                         out_dim=4)
+        self.encoder = Sequential(
+            nn.Conv1d(80, 256, 3, padding=1),
+            nn.Conv1d(256, 1, 3, padding=1),
+        )
 
-        self.phon_train_pred = PhonPredictor()
-        self.phon_lin = Linear(4, embed_dims)
-        self.phon_series_lin = Linear(4, series_embed_dims)
-
-        self.dur_pred = SeriesPredictor(num_chars=num_chars,
-                                        emb_dim=series_embed_dims,
-                                        conv_dims=durpred_conv_dims,
-                                        rnn_dims=durpred_rnn_dims,
-                                        dropout=durpred_dropout)
-        self.pitch_pred = SeriesPredictor(num_chars=num_chars,
-                                          emb_dim=series_embed_dims,
-                                          conv_dims=pitch_conv_dims,
-                                          rnn_dims=pitch_rnn_dims,
-                                          dropout=pitch_dropout)
-        self.energy_pred = SeriesPredictor(num_chars=num_chars,
-                                           emb_dim=series_embed_dims,
-                                           conv_dims=energy_conv_dims,
-                                           rnn_dims=energy_rnn_dims,
-                                           dropout=energy_dropout)
-        self.prenet = CBHG(K=prenet_k,
-                           in_channels=embed_dims,
-                           channels=prenet_dims,
-                           proj_channels=[prenet_dims, embed_dims],
-                           num_highways=prenet_num_highways,
-                           dropout=prenet_dropout)
-        self.lstm = nn.LSTM(2 * prenet_dims,
-                            rnn_dims,
-                            batch_first=True,
-                            bidirectional=True)
-        self.lin = torch.nn.Linear(2 * rnn_dims, n_mels)
+        self.decoder = Sequential(
+            nn.ConvTranspose1d(1, 256, 3, padding=1),
+            nn.ConvTranspose1d(256, 80, 3, padding=1),
+        )
         self.register_buffer('step', torch.zeros(1, dtype=torch.long))
-        self.postnet = CBHG(K=postnet_k,
-                            in_channels=n_mels,
-                            channels=postnet_dims,
-                            proj_channels=[postnet_dims, n_mels],
-                            num_highways=postnet_num_highways,
-                            dropout=postnet_dropout)
-        self.post_proj = nn.Linear(2 * postnet_dims, n_mels, bias=False)
-        self.pitch_strength = pitch_strength
-        self.energy_strength = energy_strength
-        self.pitch_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
-        self.energy_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
 
     def __repr__(self):
         num_params = sum([np.prod(p.size()) for p in self.parameters()])
@@ -167,69 +124,24 @@ class ForwardTacotron(nn.Module):
         mel = batch['mel']
         dur = batch['dur']
         mel_lens = batch['mel_len']
-        pitch = batch['pitch'].unsqueeze(1)
-        energy = batch['energy'].unsqueeze(1)
 
         if self.training:
             self.step += 1
 
         B, T = x.size()
-        ada_in = torch.zeros((B, 80, T), device=x.device)
+        mel_avg = torch.zeros((B, 80, T), device=x.device)
         for b in range(B):
             t1 = 0
             for t in range(T):
                 t2 = t1 + int(dur[b, t])
-                ada_in[b, :, t] = mel[b, :, t1:t2].mean(dim=1)
+                mel_avg[b, :, t] = mel[b, :, t1:t2].mean(dim=1)
                 t1 = t2
-        ada_in[ada_in != ada_in] = 0
-        ada_target = self.phon_train_pred(ada_in)
+        mel_avg[mel_avg != mel_avg] = 0
 
-        ada_hat = self.phon_pred(x)
+        pitch_pred = self.encoder(mel_avg)
+        mel_pred = self.decoder(pitch_pred)
 
-        ada_target_in = ada_target if train else ada_hat
-
-        ada_series = self.phon_series_lin(ada_target_in)
-        ada_out = self.phon_lin(ada_target_in)
-
-        dur_hat = self.dur_pred(x, ada_series).squeeze(-1)
-        pitch_hat = self.pitch_pred(x, ada_series).transpose(1, 2)
-        energy_hat = self.energy_pred(x, ada_series).transpose(1, 2)
-
-        x = self.embedding(x)
-        x = x + ada_out
-        x = x.transpose(1, 2)
-        x = self.prenet(x)
-
-        pitch_proj = self.pitch_proj(pitch)
-        pitch_proj = pitch_proj.transpose(1, 2)
-        x = x + pitch_proj * self.pitch_strength
-
-        energy_proj = self.energy_proj(energy)
-        energy_proj = energy_proj.transpose(1, 2)
-        x = x + energy_proj * self.energy_strength
-
-        x = self.lr(x, dur)
-
-        x = pack_padded_sequence(x, lengths=mel_lens.cpu(), enforce_sorted=False,
-                                 batch_first=True)
-
-        x, _ = self.lstm(x)
-
-        x, _ = pad_packed_sequence(x, padding_value=self.padding_value, batch_first=True)
-
-        x = self.lin(x)
-        x = x.transpose(1, 2)
-
-        x_post = self.postnet(x)
-        x_post = self.post_proj(x_post)
-        x_post = x_post.transpose(1, 2)
-
-        x_post = self._pad(x_post, mel.size(2))
-        x = self._pad(x, mel.size(2))
-
-        return {'mel': x, 'mel_post': x_post,
-                'dur': dur_hat, 'pitch': pitch_hat, 'energy': energy_hat,
-                'ada_hat': ada_hat, 'ada_target': ada_target}
+        return {'mel_avg': mel_avg, 'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 
     def generate(self,
                  x: torch.Tensor,
