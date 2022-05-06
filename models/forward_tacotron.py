@@ -105,16 +105,15 @@ class ForwardTacotron(nn.Module):
         super().__init__()
 
         self.encoder = Sequential(
-            nn.Conv1d(80, 256, 1),
-            nn.Conv1d(256, 32, 1),
-            nn.Conv1d(32, 1, 1),
-            nn.Tanh()
+            nn.Conv1d(80, 256, 3, padding=1),
+            nn.Conv1d(256, 32, 3, padding=1),
+            nn.Conv1d(32, 1, 3, padding=1)
         )
 
         self.decoder = Sequential(
-            nn.ConvTranspose1d(1, 32, 1),
-            nn.ConvTranspose1d(32, 80, 1),
-            nn.Conv1d(80, 80, 1),
+            nn.ConvTranspose1d(1, 32, 3, padding=1),
+            nn.ConvTranspose1d(32, 256, 3, padding=1),
+            nn.Conv1d(256, 80, 3, padding=1),
         )
 
         self.register_buffer('step', torch.zeros(1, dtype=torch.long))
