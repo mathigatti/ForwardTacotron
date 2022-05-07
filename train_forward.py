@@ -12,7 +12,7 @@ from torch.utils.data.dataloader import DataLoader
 
 from models.forward_tacotron import ForwardTacotron
 from models.tacotron import Tacotron
-from trainer.common import to_device
+from trainer.common import to_device, np_now
 from trainer.forward_trainer import ForwardTrainer
 from utils.checkpoints import restore_checkpoint, init_tts_model
 from utils.dataset import get_tts_datasets
@@ -49,7 +49,7 @@ def create_gta_features(model: Tacotron,
             voice_mask = batch['mel'].mean(1) < -11
             voice_mask = voice_mask.squeeze()[:batch['mel_len'][j]].to(device)
             mel[voice_mask] = 0
-            np.save(str(save_path/f'{item_id}.npy'), mel, allow_pickle=False)
+            np.save(str(save_path/f'{item_id}.npy'), np_now(mel), allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Batches '
         stream(msg)
