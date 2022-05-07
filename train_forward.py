@@ -43,7 +43,7 @@ def create_gta_features(model: Tacotron,
 
         with torch.no_grad():
             pred = model(batch)
-        gta = pred['pitch'].cpu().numpy()
+        gta = pred['pitch']
         for j, item_id in enumerate(batch['item_id']):
             mel = gta[j][:, :batch['mel_len'][j]].squeeze()
             voice_mask = batch['mel'].mean(1) < -11
