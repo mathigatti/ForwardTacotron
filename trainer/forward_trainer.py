@@ -77,7 +77,9 @@ class ForwardTrainer:
 
                 pred = model(batch)
 
-                pred['pitch'][pitch_target == 0] = 0
+                voice_mask = batch['mel'].mean(1) > -11
+
+                pred['pitch'][pitch_target == 0 & voice_mask[:, None, :]] = 0
                 pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
 
                 loss = pitch_loss
