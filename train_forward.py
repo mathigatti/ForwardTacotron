@@ -47,7 +47,7 @@ def create_gta_features(model: Tacotron,
         for j, item_id in enumerate(batch['item_id']):
             mel = gta[j][:, :batch['mel_len'][j]].squeeze()
             voice_mask = batch['mel'].mean(1) < -11
-            voice_mask = voice_mask.squeeze()[:batch['mel_len'][j]].to(mel.device)
+            voice_mask = voice_mask.squeeze()[:batch['mel_len'][j]].to(device)
             mel[voice_mask] = 0
             np.save(str(save_path/f'{item_id}.npy'), mel, allow_pickle=False)
         bar = progbar(i, iters)
