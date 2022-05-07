@@ -40,7 +40,7 @@ class BatchNormConv(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, kernel: int, relu: bool = False):
         super().__init__()
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel, stride=1, padding=kernel // 2, bias=False)
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel, stride=1, padding=kernel // 2, bias=True)
         self.bnorm = nn.BatchNorm1d(out_channels)
         self.relu = relu
 
