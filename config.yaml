@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_pitch_ext'
+tts_model_id: 'bild_pitch_extr_conv'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
@@ -83,7 +83,7 @@ forward_tacotron:
     durpred_rnn_dims: 64
     durpred_dropout: 0.5
 
-    pitch_conv_dims: 256
+    pitch_conv_dims: 512
     pitch_rnn_dims: 128
     pitch_dropout: 0.5
     pitch_strength: 1.              # set to 0 if you want no pitch conditioning
