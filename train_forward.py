@@ -46,6 +46,7 @@ def create_gta_features(model: Tacotron,
         gta = pred['pitch']
         for j, item_id in enumerate(batch['item_id']):
             mel = gta[j][:, :batch['mel_len'][j]].squeeze()
+            mel = torch.clamp(mel, min=0.)
             voice_mask = batch['mel'].mean(1) < -11
             voice_mask = voice_mask.squeeze()[:batch['mel_len'][j]].to(device)
             mel[voice_mask] = 0
