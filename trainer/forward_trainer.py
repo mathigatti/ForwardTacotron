@@ -115,8 +115,8 @@ class ForwardTrainer:
 
                 stream(msg)
 
-            #val_out = self.evaluate(model, session.val_set)
-            #self.writer.add_scalar('Pitch_Loss/val', val_out['pitch_loss'], model.get_step())
+            val_out = self.evaluate(model, session.val_set)
+            self.writer.add_scalar('Pitch_Loss/val', val_out['pitch_loss'], model.get_step())
             save_checkpoint(model=model, optim=optimizer, config=self.config,
                             path=self.paths.forward_checkpoints / 'latest_model.pt')
 
@@ -127,29 +127,18 @@ class ForwardTrainer:
 
     def evaluate(self, model: Union[ForwardTacotron, FastPitch], val_set: DataLoader) -> Dict[str, float]:
         model.eval()
-        m_val_loss = 0
-        dur_val_loss = 0
         pitch_val_loss = 0
-        energy_val_loss = 0
         device = next(model.parameters()).device
         for i, batch in enumerate(val_set, 1):
             batch = to_device(batch, device=device)
             with torch.no_grad():
                 pred = model(batch)
-                m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
-                m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
-                dur_loss = self.l1_loss(pred['dur'].unsqueeze(1), batch['dur'].unsqueeze(1), batch['x_len'])
-                pitch_loss = self.l1_loss(pred['pitch'], batch['pitch'].unsqueeze(1), batch['x_len'])
-                energy_loss = self.l1_loss(pred['energy'], batch['energy'].unsqueeze(1), batch['x_len'])
+                pitch_target = batch['pitch'].detach().clone().unsqueeze(1)
+                pred['pitch'][pitch_target == 0] = 0
+                pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
                 pitch_val_loss += pitch_loss
-                energy_val_loss += energy_loss
-                m_val_loss += m1_loss.item() + m2_loss.item()
-                dur_val_loss += dur_loss.item()
         return {
-            'mel_loss': m_val_loss / len(val_set),
-            'dur_loss': dur_val_loss / len(val_set),
             'pitch_loss': pitch_val_loss / len(val_set),
-            'energy_loss': energy_val_loss / len(val_set)
         }
 
     @ignore_exception
