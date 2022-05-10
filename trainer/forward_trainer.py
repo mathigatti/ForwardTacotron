@@ -77,12 +77,7 @@ class ForwardTrainer:
 
                 pitch_target = batch['pitch'].detach().clone().long()
                 pitch_target = torch.clamp(pitch_target, min=0, max=511)
-                #pitch_target = F.one_hot(pitch_target)
                 pred = model(batch)
-
-
-
-                #pred['pitch'][pitch_target == 0] = 0
                 pitch_loss = self.ce_loss(pred['pitch'], pitch_target)
 
                 loss = pitch_loss
@@ -136,7 +131,7 @@ class ForwardTrainer:
             batch = to_device(batch, device=device)
             with torch.no_grad():
                 pred = model(batch)
-                pitch_target = batch['pitch'].detach().clone().unsqueeze(1).long()
+                pitch_target = batch['pitch'].detach().clone().long()
                 pitch_target = torch.clamp(pitch_target, min=0, max=511)
                 pred['pitch'][pitch_target == 0] = 0
                 pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
