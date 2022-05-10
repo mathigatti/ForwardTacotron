@@ -47,13 +47,6 @@ def create_gta_features(model: Tacotron,
         for j, item_id in enumerate(batch['item_id']):
             pred_pitch = gta[j][:, :batch['mel_len'][j]].squeeze()
             pred_inds = torch.argmax(pred_pitch, dim=0)
-            pred_probs = pred_pitch.softmax(0)[pred_inds, :]
-            pred_prob_mask = pred_probs < 0.2
-
-            #voice_mask = batch['mel'].mean(1) < -11
-            #voice_mask = voice_mask.squeeze()[:batch['mel_len'][j]].to(device)
-            #pred_inds[voice_mask] = 0
-            pred_inds[pred_prob_mask] = 0
             np.save(str(save_path/f'{item_id}.npy'), np_now(pred_inds.float()), allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Batches '
