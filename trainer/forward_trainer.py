@@ -133,7 +133,7 @@ class ForwardTrainer:
                 pred = model(batch)
                 pitch_target = batch['pitch'].detach().clone().long()
                 pitch_target = torch.clamp(pitch_target, min=0, max=511)
-                pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
+                pitch_loss = self.ce_loss(pred['pitch'], pitch_target)
                 pitch_val_loss += pitch_loss
         return {
             'pitch_loss': pitch_val_loss / len(val_set),
