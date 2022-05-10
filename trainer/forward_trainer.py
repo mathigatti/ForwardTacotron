@@ -159,3 +159,8 @@ class ForwardTrainer:
         self.writer.add_figure('Pitch/target', pitch_fig, model.step)
         self.writer.add_figure('Pitch/pred_pitch', pitch_gta_fig, model.step)
         self.writer.add_figure('Pitch/pred_probs', pitch_prob_fig, model.step)
+
+        pred_prob_mask = pred_probs < 0.2
+        pred_inds[pred_prob_mask] = 0
+        pitch_mask_fig = plot_pitch(np_now(pred_inds))
+        self.writer.add_figure('Pitch/pred_pitch_masked', pitch_mask_fig, model.step)
