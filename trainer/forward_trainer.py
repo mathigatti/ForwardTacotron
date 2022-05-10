@@ -152,7 +152,10 @@ class ForwardTrainer:
 
         pred_pitch = pred['pitch'].squeeze()[0]
         pred_inds = torch.argmax(pred_pitch, dim=0)
-        pred_probs = pred_pitch.softmax(0)[pred_inds, :]
+        pred_pitch_norm = pred_pitch.softmax(0)
+        pred_probs = torch.zeros(len(pred_inds))
+        for i in range(len(pred_inds)):
+            pred_probs[i] = pred_pitch_norm[pred_inds[i], i]
         pitch_gta_fig = plot_pitch(np_now(pred_inds))
         pitch_prob_fig = plot_pitch(np_now(pred_probs))
 
