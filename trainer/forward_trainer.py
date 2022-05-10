@@ -2,6 +2,7 @@ import time
 from typing import Tuple, Dict, Any, Union
 
 import torch
+import torch.nn.functional as F
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -31,6 +32,7 @@ class ForwardTrainer:
         self.train_cfg = config[model_type]['training']
         self.writer = SummaryWriter(log_dir=paths.forward_log, comment='v1')
         self.l1_loss = MaskedL1()
+        self.ce_loss = torch.nn.CrossEntropyLoss(ignore_index=0)
 
     def train(self, model: Union[ForwardTacotron, FastPitch], optimizer: Optimizer) -> None:
         forward_schedule = self.train_cfg['schedule']
@@ -73,14 +75,15 @@ class ForwardTrainer:
                 start = time.time()
                 model.train()
 
-                pitch_target = batch['pitch'].detach().clone().unsqueeze(1)
-
+                pitch_target = batch['pitch'].detach().clone().long()
+                pitch_target = torch.clamp(pitch_target, min=0, max=511)
+                #pitch_target = F.one_hot(pitch_target)
                 pred = model(batch)
 
-                voice_mask = batch['mel'].mean(1) > -11
 
-                pred['pitch'][pitch_target == 0] = 0
-                pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
+
+                #pred['pitch'][pitch_target == 0] = 0
+                pitch_loss = self.ce_loss(pred['pitch'], pitch_target)
 
                 loss = pitch_loss
 
@@ -133,7 +136,8 @@ class ForwardTrainer:
             batch = to_device(batch, device=device)
             with torch.no_grad():
                 pred = model(batch)
-                pitch_target = batch['pitch'].detach().clone().unsqueeze(1)
+                pitch_target = batch['pitch'].detach().clone().unsqueeze(1).long()
+                pitch_target = torch.clamp(pitch_target, min=0, max=511)
                 pred['pitch'][pitch_target == 0] = 0
                 pitch_loss = self.l1_loss(pred['pitch'], pitch_target, batch['mel_len'])
                 pitch_val_loss += pitch_loss
@@ -149,8 +153,15 @@ class ForwardTrainer:
         batch = to_device(batch, device=device)
 
         pred = model(batch)
+
         pitch_fig = plot_pitch(np_now(batch['pitch'][0]))
-        pitch_gta_fig = plot_pitch(np_now(pred['pitch'].squeeze()[0]))
+
+        pred_pitch = pred['pitch'].squeeze()[0]
+        pred_inds = torch.argmax(pred_pitch, dim=0)
+        pred_probs = pred_pitch.softmax(0)[pred_inds, :]
+        pitch_gta_fig = plot_pitch(np_now(pred_inds))
+        pitch_prob_fig = plot_pitch(np_now(pred_probs))
 
         self.writer.add_figure('Pitch/target', pitch_fig, model.step)
-        self.writer.add_figure('Pitch/ground_truth_aligned', pitch_gta_fig, model.step)
+        self.writer.add_figure('Pitch/pred_pitch', pitch_gta_fig, model.step)
+        self.writer.add_figure('Pitch/pred_probs', pitch_prob_fig, model.step)
