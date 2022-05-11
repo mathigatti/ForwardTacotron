@@ -271,8 +271,8 @@ class ForwardDataset(Dataset):
         return len(self.metadata)
 
 
-def pad1d(x, max_len):
-    return np.pad(x, (0, max_len - len(x)), mode='constant')
+def pad1d(x, max_len, val=0):
+    return np.pad(x, (val, max_len - len(x)), mode='constant')
 
 
 def pad2d(x, max_len):
@@ -303,7 +303,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         dur = np.stack(dur)
         dur = torch.tensor(dur).float()
     if 'pitch' in batch[0]:
-        pitch = [pad1d(b['pitch'][:max_spec_len], max_spec_len) for b in batch]
+        pitch = [pad1d(b['pitch'][:max_spec_len], max_spec_len, val=511) for b in batch]
         pitch = np.stack(pitch)
         pitch = torch.tensor(pitch).float()
     if 'energy' in batch[0]:
