@@ -165,4 +165,13 @@ class ForwardTrainer:
 
         pred_inds_2 = torch.argmax(pred_pitch[1:, :], dim=0)
         pitch_inds_2_fig = plot_pitch(np_now(pred_inds_2))
-        self.writer.add_figure('Pitch/pred_pitch_masked', pitch_inds_2_fig, model.step)
+        self.writer.add_figure('Pitch/pred_pitch_thres_0', pitch_inds_2_fig, model.step)
+
+        pred_inds_3 = torch.argmax(pred_pitch[1:, :], dim=0)
+        pred_probs = torch.zeros(len(pred_inds))
+        for i in range(len(pred_inds_3)):
+            pred_probs[i] = pred_pitch_norm[pred_inds_3[i], i]
+            if pred_probs[i] < 0.01:
+                pred_inds_3[i] = 0
+        pitch_inds_3_fig = plot_pitch(np_now(pred_inds_3))
+        self.writer.add_figure('Pitch/pred_pitch_thres_001', pitch_inds_3_fig, model.step)
