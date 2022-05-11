@@ -71,8 +71,8 @@ if __name__ == '__main__':
     dsp = DSP.from_config(config)
     paths = Paths(config['data_path'], config['voc_model_id'], config['tts_model_id'])
 
-    assert len(os.listdir(paths.alg)) > 0, f'Could not find alignment files in {paths.alg}, please predict ' \
-                                           f'alignments first with python train_tacotron.py --force_align!'
+    #assert len(os.listdir(paths.alg)) > 0, f'Could not find alignment files in {paths.alg}, please predict ' \
+    #                                       f'alignments first with python train_tacotron.py --force_align!'
 
     force_gta = args.force_gta
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

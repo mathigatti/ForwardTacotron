@@ -261,9 +261,14 @@ class ForwardDataset(Dataset):
         x = self.tokenizer(text)
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
-        dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
-        pitch = np.load(str(self.path/'raw_pitch'/f'{item_id}.npy'))
-        energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
+        try:
+            dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
+            pitch = np.load(str(self.path/'raw_pitch'/f'{item_id}.npy'))
+            energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
+        except Exception as e:
+            dur = x.copy()
+            pitch = x.copy()
+            energy = x.copy()
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
                 'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy}
 
