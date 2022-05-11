@@ -32,7 +32,7 @@ class ForwardTrainer:
         self.train_cfg = config[model_type]['training']
         self.writer = SummaryWriter(log_dir=paths.forward_log, comment='v1')
         self.l1_loss = MaskedL1()
-        self.ce_loss = torch.nn.CrossEntropyLoss(ignore_index=0)
+        self.ce_loss = torch.nn.CrossEntropyLoss(ignore_index=511)
 
     def train(self, model: Union[ForwardTacotron, FastPitch], optimizer: Optimizer) -> None:
         forward_schedule = self.train_cfg['schedule']
@@ -163,7 +163,6 @@ class ForwardTrainer:
         self.writer.add_figure('Pitch/pred_pitch', pitch_gta_fig, model.step)
         self.writer.add_figure('Pitch/pred_probs', pitch_prob_fig, model.step)
 
-        pred_prob_mask = pred_probs < 0.2
-        pred_inds[pred_prob_mask] = 0
-        pitch_mask_fig = plot_pitch(np_now(pred_inds))
-        self.writer.add_figure('Pitch/pred_pitch_masked', pitch_mask_fig, model.step)
+        pred_inds_2 = torch.argmax(pred_pitch[1:, :], dim=0)
+        pitch_inds_2_fig = plot_pitch(np_now(pred_inds_2))
+        self.writer.add_figure('Pitch/pred_pitch_masked', pitch_inds_2_fig, model.step)
