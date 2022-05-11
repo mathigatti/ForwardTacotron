@@ -272,7 +272,7 @@ class ForwardDataset(Dataset):
 
 
 def pad1d(x, max_len, val=0):
-    return np.pad(x, (val, max_len - len(x)), mode='constant')
+    return np.pad(x, (0, max_len - len(x)), mode='constant', constant_values=val)
 
 
 def pad2d(x, max_len):
