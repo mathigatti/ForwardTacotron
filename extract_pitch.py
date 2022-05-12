@@ -4,6 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 from typing import Union
+import seaborn as sns
 
 import torch
 from torch import optim
@@ -95,16 +96,17 @@ if __name__ == '__main__':
     pred_pitch = pred['pitch'].squeeze().detach().cpu()
 
     pred_pitch_norm = pred_pitch.softmax(0)
-    pred_inds = torch.argmax(pred_pitch[1:, :], dim=0)
-    pred_probs = torch.zeros(len(pred_inds))
-    for k in range(len(pred_inds)):
-        pred_probs[k] = pred_pitch_norm[pred_inds[k], k]
+    pred_inds_1 = torch.argmax(pred_pitch[0:, :], dim=0)
+    pred_inds_2 = torch.argmax(pred_pitch[1:, :], dim=0)
+    pred_probs = torch.zeros(len(pred_inds_1))
+    for k in range(len(pred_inds_1)):
+        pred_probs[k] = pred_pitch_norm[pred_inds_2[k], k]
         if pred_probs[k] < 0.001:
-            pred_inds[k] = 0
+            pred_inds_2[k] = 0
 
     #pred_inds[pred_inds > 400] = 0
 
-    pred_probs = torch.zeros(len(pred_inds))
+    pred_probs = torch.zeros(len(pred_inds_1))
 
     import matplotlib.pyplot as plt
 
@@ -112,11 +114,21 @@ if __name__ == '__main__':
     pitch_gt = np.load(f'data/raw_pitch/{item_id}.npy')
 
     spec = np.flip(spec, axis=0)
-    fig, (ax1, ax2) = plt.subplots(2)
-    ax1.imshow(np.log(spec[300:, -400:]), interpolation='nearest', aspect='auto')
-    ax2.plot(pred_inds[-400:], color='blue')
-    ax2.plot(pitch_gt[-400:], color='gray')
+    plt.xticks([])
+    fig, axes = plt.subplots(4)
+    (ax1, ax2, ax3, ax4) = axes
+    ax1.imshow(np.log(spec[400:, -400:]), interpolation='nearest', aspect='auto')
+    ax2.plot(pitch_gt[-400:], color='black', alpha=0.5)
+    ax3.plot(pred_inds_1[-400:], color='black', alpha=0.5)
+    ax4.plot(pred_inds_2[-400:], color='black', alpha=0.5)
+    ax1.set_xticks([])
+    for a in axes[1:]:
+        a.set_xticks([])
+        a.set_ylim(0, 200)
+        a.set_xlim(0, 400)
     plt.xlim(0, 400)
     plt.savefig('/tmp/pitch_gt.png')
-    print(pred_inds)
-    print(pitch_gt)
+
+    #sns.heatmap(data=spec)
+    #plt.savefig('/tmp/pitch_sns.png')
+    #plt.show()
