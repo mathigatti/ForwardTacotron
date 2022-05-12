@@ -95,38 +95,49 @@ if __name__ == '__main__':
     pred = model({'mel': mel, 'x': torch.zeros(1), 'dur': torch.zeros(1), 'pitch': torch.zeros(1), 'mel_len': 1, 'energy': torch.zeros(1)})
     pred_pitch = pred['pitch'].squeeze().detach().cpu()
 
+
     pred_pitch_norm = pred_pitch.softmax(0)
-    pred_inds_1 = torch.argmax(pred_pitch[0:, :], dim=0)
-    pred_inds_2 = torch.argmax(pred_pitch[1:, :], dim=0)
-    pred_probs = torch.zeros(len(pred_inds_1))
-    for k in range(len(pred_inds_1)):
-        pred_probs[k] = pred_pitch_norm[pred_inds_2[k], k]
-        if pred_probs[k] < 0.001:
-            pred_inds_2[k] = 0
-
-    #pred_inds[pred_inds > 400] = 0
-
-    pred_probs = torch.zeros(len(pred_inds_1))
-
-    import matplotlib.pyplot as plt
-
     item_id = Path(file).stem
     pitch_gt = np.load(f'data/raw_pitch/{item_id}.npy')
 
+    pred_inds = torch.argmax(pred_pitch[1:, :], dim=0)
+    pred_probs = torch.zeros(len(pred_inds))
+
+    thresholds = ['GT', 0.1, 0.01, 0.001]
+    thres_pred_inds = [pitch_gt]
+
+    for thres in thresholds[1:]:
+        pred_inds_thres = pred_inds.clone()
+        for k in range(len(pred_inds_thres)):
+            pred_probs[k] = pred_pitch_norm[pred_inds_thres[k], k]
+            if pred_probs[k] < thres:
+                pred_inds_thres[k] = 0
+        thres_pred_inds.append(pred_inds_thres)
+
+    #pred_inds[pred_inds > 400] = 0
+    pred_probs = torch.zeros(len(pred_inds))
+
+    import matplotlib.pyplot as plt
+
     spec = np.flip(spec, axis=0)
     plt.xticks([])
-    fig, axes = plt.subplots(4)
-    (ax1, ax2, ax3, ax4) = axes
-    ax1.imshow(np.log(spec[400:, -400:]), interpolation='nearest', aspect='auto')
-    ax2.plot(pitch_gt[-400:], color='black', alpha=0.5)
-    ax3.plot(pred_inds_1[-400:], color='black', alpha=0.5)
-    ax4.plot(pred_inds_2[-400:], color='black', alpha=0.5)
-    ax1.set_xticks([])
-    for a in axes[1:]:
+
+    XLIM = 400
+    YLIM = 200
+
+    fig, axes = plt.subplots(len(thresholds)+1)
+    axes[0].imshow(np.log(spec[400:, -XLIM:]), interpolation='nearest', aspect='auto')
+    axes[0].set_xticks([])
+
+    for thres, a, pred_inds in zip(thresholds, axes[1:], thres_pred_inds):
+        a.plot(pred_inds[-XLIM:], color='black', alpha=0.5)
         a.set_xticks([])
-        a.set_ylim(0, 200)
-        a.set_xlim(0, 400)
-    plt.xlim(0, 400)
+        a.set_yticks([])
+        a.set_ylabel(f'{thres}')
+        a.set_ylim(0, YLIM)
+        a.set_xlim(0, XLIM)
+
+    axes[-1].set_xticks(range(0, XLIM, 50))
     plt.savefig('/tmp/pitch_gt.png')
 
     #sns.heatmap(data=spec)
