@@ -68,20 +68,23 @@ class DSP:
         wav = wav.astype(np.float32)
         sf.write(str(path), wav, samplerate=self.sample_rate)
 
-    def wav_to_mel(self, y: np.array, normalize=True) -> np.array:
+    def wav_to_spec(self, y: np.array, normalize=True) -> np.array:
         spec = librosa.stft(
             y=y,
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             win_length=self.win_length)
         spec = np.abs(spec)
-        mel = librosa.feature.melspectrogram(
-            S=spec,
-            sr=self.sample_rate,
+
+        return spec
+
+    def wav_to_mel(self, y: np.array, normalize=True) -> np.array:
+        spec = librosa.stft(
+            y=y,
             n_fft=self.n_fft,
-            n_mels=self.n_mels,
-            fmin=self.fmin,
-            fmax=self.fmax)
+            hop_length=self.hop_length,
+            win_length=self.win_length)
+        mel = np.abs(spec)
         if normalize:
             mel = self.normalize(mel)
         return mel
