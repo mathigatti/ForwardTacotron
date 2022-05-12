@@ -16,7 +16,7 @@ class SeriesPredictor(nn.Module):
     def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
         self.convs = torch.nn.ModuleList([
-            BatchNormConv(80, conv_dims, 5, relu=True),
+            BatchNormConv(513, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
         ])
