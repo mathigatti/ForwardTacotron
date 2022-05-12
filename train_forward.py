@@ -49,10 +49,10 @@ def create_gta_features(model: Tacotron,
             pred_pitch_norm = pred_pitch.softmax(0)
             pred_inds = torch.argmax(pred_pitch[1:, :], dim=0)
             pred_probs = torch.zeros(len(pred_inds))
-            for i in range(len(pred_inds)):
-                pred_probs[i] = pred_pitch_norm[pred_inds[i], i]
-                if pred_probs[i] < 0.01:
-                    pred_inds[i] = 0
+            for k in range(len(pred_inds)):
+                pred_probs[k] = pred_pitch_norm[pred_inds[k], i]
+                if pred_probs[k] < 0.01:
+                    pred_inds[k] = 0
             np.save(str(save_path/f'{item_id}.npy'), np_now(pred_inds.float()), allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Batches '
