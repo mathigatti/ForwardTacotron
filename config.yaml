@@ -20,7 +20,7 @@ dsp:
   trim_start_end_silence: True          # Whether to trim leading and trailing silence
   trim_silence_top_db: 60               # Threshold in decibels below reference to consider silence for for trimming
                                         # start and end silences with librosa (no trimming if really high)
-  pitch_max_freq: 600                   # Maximum value for pitch frequency to remove outliers (Common pitch range is
+  pitch_max_freq: 400                   # Maximum value for pitch frequency to remove outliers (Common pitch range is
                                         # about 60-300)
   trim_long_silences: False             # Whether to reduce long silence using WebRTC Voice Activity Detector
   vad_window_length: 30                 # In milliseconds
