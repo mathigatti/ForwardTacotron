@@ -92,6 +92,7 @@ if __name__ == '__main__':
     mel = torch.tensor(mel).unsqueeze(0)
     spec = dsp.wav_to_spec(wav)
 
+    model.eval()
     pred = model({'mel': mel, 'x': torch.zeros(1), 'dur': torch.zeros(1), 'pitch': torch.zeros(1), 'mel_len': 1, 'energy': torch.zeros(1)})
     pred_pitch = pred['pitch'].squeeze().detach().cpu()
 
@@ -100,10 +101,11 @@ if __name__ == '__main__':
     item_id = Path(file).stem
     pitch_gt = np.load(f'data/raw_pitch/{item_id}.npy')
 
+    #pred_pitch[0, :] = -1e9
     pred_inds = torch.argmax(pred_pitch[1:, :], dim=0)
     pred_probs = torch.zeros(len(pred_inds))
 
-    thresholds = ['GT', 0.1, 0.01, 0.001]
+    thresholds = ['GT', 0.1, 0.01, 0.001, 1e-4, 1e-5]
     thres_pred_inds = [pitch_gt]
 
     for thres in thresholds[1:]:
