@@ -305,7 +305,8 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     if 'pitch' in batch[0]:
         pitch = [pad1d(b['pitch'][:max_x_len], max_x_len) for b in batch]
         pitch = np.stack(pitch)
-        pitch = torch.tensor(pitch).float()
+        pitch = torch.tensor(pitch).long()
+        pitch = torch.clamp(pitch, min=0, max=511)
     if 'energy' in batch[0]:
         energy = [pad1d(b['energy'][:max_x_len], max_x_len) for b in batch]
         energy = np.stack(energy)
