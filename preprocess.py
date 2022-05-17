@@ -10,7 +10,7 @@ from utils.dsp import *
 from utils.files import get_files, pickle_binary, read_config
 from utils.paths import Paths
 from utils.text.cleaners import Cleaner
-from utils.text.recipes import ljspeech
+from utils.text.recipes import ljspeech, vctk
 
 
 def valid_n_workers(num):
@@ -48,7 +48,7 @@ class Preprocessor:
         try:
             dp = self._convert_file(path)
             np.save(self.paths.mel/f'{dp.item_id}.npy', dp.mel, allow_pickle=False)
-            np.save(self.paths.quant/f'{dp.item_id}.npy', dp.quant, allow_pickle=False)
+            #np.save(self.paths.quant/f'{dp.item_id}.npy', dp.quant, allow_pickle=False)
             np.save(self.paths.raw_pitch/f'{dp.item_id}.npy', dp.pitch, allow_pickle=False)
             return dp
         except Exception as e:
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     print(f'\n{len(wav_files)} .wav files found in "{args.path}"')
     assert len(wav_files) > 0, f'Found no wav files in {args.path}, exiting.'
 
-    text_dict = ljspeech(args.path)
+    text_dict = vctk(args.path, n_workers=4)
     text_dict = {item_id: text for item_id, text in text_dict.items()
                  if item_id in wav_ids and len(text) > config['preprocessing']['min_text_len']}
     wav_files = [w for w in wav_files if w.stem in text_dict]
