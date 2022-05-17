@@ -257,7 +257,7 @@ class ForwardDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict[str, torch.tensor]:
         item_id = self.metadata[index]
-        text = self.text_dict[item_id]
+        text = 'abaldfgjalskdfjö'
         x = self.tokenizer(text)
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
