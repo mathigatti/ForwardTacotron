@@ -117,9 +117,11 @@ class ForwardTacotron(nn.Module):
         )
 
         self.decoder_2 = Sequential(
-            nn.ConvTranspose1d(1, 32, 3, padding=1),
-            nn.ConvTranspose1d(32, 256, 3, padding=1),
-            nn.Conv1d(256, 80, 3, padding=1),
+            nn.Conv1d(1, 80, 1),
+        )
+
+        self.decoder_3 = Sequential(
+            nn.Conv1d(80, 80, 1),
         )
 
         self.register_buffer('step', torch.zeros(1, dtype=torch.long))
@@ -141,7 +143,11 @@ class ForwardTacotron(nn.Module):
         pitch_pred = self.encoder(mel)
         mel_pred_1 = self.decoder_1(energy)
         mel_pred_2 = self.decoder_2(pitch_pred)
-        mel_pred = mel_pred_1 + mel_pred_2
+
+        B, N, T = mel.size()
+        mel_in = torch.cat([torch.zeros(B, N, 1, device=x.device), mel[:, :, :-1]], dim=-1)
+        mel_pred_3 = self.decoder_3(mel_in)
+        mel_pred = mel_pred_1 + mel_pred_2 + mel_pred_3
 
         return {'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 

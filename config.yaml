@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_autoenc_pitch_two'
+tts_model_id: 'bild_autoenc_pitch_gta'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
