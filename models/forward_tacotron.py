@@ -120,6 +120,10 @@ class ForwardTacotron(nn.Module):
             nn.Conv1d(80, 80, 1),
         )
 
+        self.decoder_3 = Sequential(
+            nn.Conv1d(80, 80, 1),
+        )
+
         self.register_buffer('step', torch.zeros(1, dtype=torch.long))
 
     def __repr__(self):
@@ -148,6 +152,8 @@ class ForwardTacotron(nn.Module):
         mel_pred_2 = self.decoder_2(mel_shuff)
 
         mel_pred = mel_pred_1 + mel_pred_2
+
+        mel_pred = self.decoder_3(mel_pred)
 
         return {'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 
