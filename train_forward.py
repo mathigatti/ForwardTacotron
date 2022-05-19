@@ -84,7 +84,7 @@ if __name__ == '__main__':
         train_set, val_set = get_tts_datasets(
             paths.data, 1, r=1, model_type='forward',
             filter_attention=False, max_mel_len=None)
-        create_gta_features(model, train_set, val_set, paths.gta)
+        create_gta_features(model, train_set, val_set, paths.raw_pitch_pred)
         print('\n\nYou can now train WaveRNN on GTA features - use python train_wavernn.py --gta\n')
     else:
         trainer = ForwardTrainer(paths=paths, dsp=dsp, config=config)
