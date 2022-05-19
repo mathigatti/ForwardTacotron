@@ -141,10 +141,9 @@ class ForwardTacotron(nn.Module):
 
 
         mel_shuff = torch.zeros(mel.size(), device=mel.device)
-        for b in range(mel.size(0)):
-            for t in range(mel.size(-1)):
-                idx = torch.randperm(80)
-                mel_shuff[b, :, t] = mel[b, idx, t]
+        for t in range(mel.size(-1)):
+            idx = torch.randperm(80)
+            mel_shuff[:, :, t] = mel[:, idx, t]
 
         mel_pred_2 = self.decoder_2(mel_shuff)
 
