@@ -148,7 +148,7 @@ class ForwardTacotron(nn.Module):
             idx = torch.randperm(80)
             mel_shuff[:, :, t] = mel_pred_2[:, idx, t]
 
-        mel_pred_cat = torch.cat([pitch_pred, mel_pred_2], dim=1)
+        mel_pred_cat = torch.cat([pitch_pred, mel_shuff], dim=1)
 
         mel_pred = self.decoder_3(mel_pred_cat)
 
