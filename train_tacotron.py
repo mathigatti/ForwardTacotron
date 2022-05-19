@@ -25,10 +25,8 @@ def normalize_values(phoneme_val):
                                for item_id, v in phoneme_val])
     mean, std = np.mean(nonzeros), np.std(nonzeros)
     for item_id, v in phoneme_val:
-        zero_idxs = np.where(v == 0.0)[0]
         v -= mean
         v /= std
-        v[zero_idxs] = 0.0
     return mean, std
 
 
@@ -52,9 +50,9 @@ def extract_pitch_energy(save_path_pitch: Path,
         pitch_char = np.zeros((dur.shape[0],), dtype=np.float32)
         energy_char = np.zeros((dur.shape[0],), dtype=np.float32)
         for idx, a, b in zip(range(mel_len), durs_cum[:-1], durs_cum[1:]):
-            values = pitch[a:b][np.where(pitch[a:b] != 0.0)[0]]
+            values = pitch[a:b]
             values = values[np.where(values < pitch_max_freq)[0]]
-            pitch_char[idx] = np.mean(values) if len(values) > 0 else 0.0
+            pitch_char[idx] = np.median(values) if len(values) > 0 else 0.0
             energy_values = energy[a:b]
             energy_char[idx] = np.mean(energy_values)if len(energy_values) > 0 else 0.0
         phoneme_pitches.append((item_id, pitch_char))
