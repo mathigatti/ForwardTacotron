@@ -110,7 +110,13 @@ class ForwardTacotron(nn.Module):
             nn.Conv1d(32, 1, 3, padding=1)
         )
 
-        self.decoder = Sequential(
+        self.decoder_1 = Sequential(
+            nn.ConvTranspose1d(2, 32, 3, padding=1),
+            nn.ConvTranspose1d(32, 256, 3, padding=1),
+            nn.Conv1d(256, 80, 3, padding=1),
+        )
+
+        self.decoder_2 = Sequential(
             nn.ConvTranspose1d(2, 32, 3, padding=1),
             nn.ConvTranspose1d(32, 256, 3, padding=1),
             nn.Conv1d(256, 80, 3, padding=1),
@@ -133,8 +139,9 @@ class ForwardTacotron(nn.Module):
 
         energy = mel.mean(dim=1).unsqueeze(1)
         pitch_pred = self.encoder(mel)
-        conc = torch.cat([pitch_pred, energy], dim=1)
-        mel_pred = self.decoder(conc)
+        mel_pred_1 = self.decoder_1(energy)
+        mel_pred_2 = self.decoder(pitch_pred)
+        mel_pred = mel_pred_1 + mel_pred_2
 
         return {'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 
