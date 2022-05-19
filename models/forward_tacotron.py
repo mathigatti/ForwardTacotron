@@ -117,10 +117,6 @@ class ForwardTacotron(nn.Module):
         )
 
         self.decoder_2 = Sequential(
-            nn.Conv1d(1, 80, 1),
-        )
-
-        self.decoder_3 = Sequential(
             nn.Conv1d(80, 80, 1),
         )
 
@@ -141,13 +137,18 @@ class ForwardTacotron(nn.Module):
 
         energy = mel.mean(dim=1).unsqueeze(1)
         pitch_pred = self.encoder(mel)
-        mel_pred_1 = self.decoder_1(energy)
-        mel_pred_2 = self.decoder_2(pitch_pred)
+        mel_pred_1 = self.decoder_1(pitch_pred)
 
-        B, N, T = mel.size()
-        mel_in = torch.cat([torch.zeros(B, N, 1, device=x.device), mel[:, :, :-1]], dim=-1)
-        mel_pred_3 = self.decoder_3(mel_in)
-        mel_pred = mel_pred_1 + mel_pred_2 + mel_pred_3
+
+        mel_shuff = torch.zeros(mel.size(), device=mel.device)
+        for b in range(mel.size(0)):
+            for t in range(mel.size(-1)):
+                idx = torch.randperm(80)
+                mel_shuff[b, :, t] = mel[b, idx, t]
+
+        mel_pred_2 = self.decoder_2(mel_shuff)
+
+        mel_pred = mel_pred_1 + mel_pred_2
 
         return {'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 
