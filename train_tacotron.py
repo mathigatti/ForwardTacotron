@@ -53,6 +53,7 @@ def extract_pitch_energy(save_path_pitch: Path,
             values = pitch[a:b]
             values = values[np.where(values < pitch_max_freq)[0]]
             pitch_char[idx] = np.median(values) if len(values) > 0 else 0.0
+            print(pitch_char[idx])
             energy_values = energy[a:b]
             energy_char[idx] = np.mean(energy_values)if len(energy_values) > 0 else 0.0
         phoneme_pitches.append((item_id, pitch_char))
@@ -66,6 +67,7 @@ def extract_pitch_energy(save_path_pitch: Path,
 
     mean, var = normalize_values(phoneme_pitches)
     for item_id, phoneme_pitch in phoneme_pitches:
+        print('pp ', phoneme_pitch)
         np.save(str(save_path_pitch / f'{item_id}.npy'), phoneme_pitch, allow_pickle=False)
 
     print(f'\nPitch mean: {mean} var: {var}')
