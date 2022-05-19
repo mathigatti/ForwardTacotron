@@ -62,7 +62,7 @@ class BatchNormConv(nn.Module):
 
     def __init__(self, in_channels: int, out_channels: int, kernel: int, relu: bool = False):
         super().__init__()
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel, stride=1, padding=kernel // 2, bias=False)
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel, stride=1, padding=kernel // 2, bias=True)
         self.bnorm = nn.BatchNorm1d(out_channels)
         self.relu = relu
 
@@ -107,11 +107,11 @@ class ForwardTacotron(nn.Module):
         self.encoder = Sequential(
             nn.Conv1d(80, 256, 3, padding=1),
             nn.Conv1d(256, 32, 3, padding=1),
-            nn.Conv1d(32, 4, 3, padding=1)
+            nn.Conv1d(32, 1, 3, padding=1)
         )
 
         self.decoder = Sequential(
-            nn.ConvTranspose1d(4, 32, 3, padding=1),
+            nn.ConvTranspose1d(2, 32, 3, padding=1),
             nn.ConvTranspose1d(32, 256, 3, padding=1),
             nn.Conv1d(256, 80, 3, padding=1),
         )
@@ -131,21 +131,12 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        B, T = x.size()
-        mel_avg = torch.zeros((B, 80, T), device=x.device)
-        for b in range(B):
-            t1 = 0
-            for t in range(T):
-                t2 = t1 + int(dur[b, t])
-                avg = mel[b, :, t1:t2].mean(dim=1)
-                mel_avg[b, :, t] = avg
-                t1 = t2
-        mel_avg[mel_avg != mel_avg] = 0
+        energy = mel.mean(dim=1).unsqueeze(1)
+        pitch_pred = self.encoder(mel)
+        conc = torch.cat([pitch_pred, energy], dim=1)
+        mel_pred = self.decoder(conc)
 
-        pitch_pred = self.encoder(mel_avg)
-        mel_pred = self.decoder(pitch_pred)
-
-        return {'mel_avg': mel_avg, 'pitch_pred': pitch_pred.mean(dim=-1).unsqueeze(-1), 'mel_pred': mel_pred}
+        return {'pitch_pred': pitch_pred, 'mel_pred': mel_pred}
 
     def generate(self,
                  x: torch.Tensor,
