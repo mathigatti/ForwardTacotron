@@ -15,10 +15,10 @@ class SeriesPredictor(nn.Module):
 
     def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
-        self.lang_embedding = nn.Embedding(2, emb_dim)
+        self.lang_embedding = nn.Embedding(2, 32)
         self.embedding = Embedding(num_chars, emb_dim)
         self.convs = torch.nn.ModuleList([
-            BatchNormConv(emb_dim, conv_dims, 5, relu=True),
+            BatchNormConv(emb_dim + 32, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
         ])
@@ -31,7 +31,9 @@ class SeriesPredictor(nn.Module):
                 lang_ind: torch.Tensor,
                 alpha: float = 1.0) -> torch.Tensor:
 
-        x = self.embedding(x) + self.lang_embedding(lang_ind)
+        x = self.embedding(x)
+        xemb = self.lang_embedding(lang_ind)
+        x = torch.cat([x, xemb], dim=-1)
         x = x.transpose(1, 2)
         for conv in self.convs:
             x = conv(x)
@@ -107,9 +109,9 @@ class ForwardTacotron(nn.Module):
                                            rnn_dims=energy_rnn_dims,
                                            dropout=energy_dropout)
         self.prenet = CBHG(K=prenet_k,
-                           in_channels=embed_dims,
+                           in_channels=embed_dims + 32,
                            channels=prenet_dims,
-                           proj_channels=[prenet_dims, embed_dims],
+                           proj_channels=[prenet_dims, embed_dims + 32],
                            num_highways=prenet_num_highways,
                            dropout=prenet_dropout)
         self.lstm = nn.LSTM(2 * prenet_dims,
@@ -127,7 +129,7 @@ class ForwardTacotron(nn.Module):
         self.post_proj = nn.Linear(2 * postnet_dims, n_mels, bias=False)
         self.pitch_strength = pitch_strength
         self.energy_strength = energy_strength
-        self.lang_embedding = nn.Embedding(num_embeddings=2, embedding_dim=embed_dims)
+        self.lang_embedding = nn.Embedding(num_embeddings=2, embedding_dim=32)
         self.pitch_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
         self.energy_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
 
@@ -156,8 +158,9 @@ class ForwardTacotron(nn.Module):
         pitch_hat = self.pitch_pred(x, lang_ind=lang_ind).transpose(1, 2)
         energy_hat = self.energy_pred(x, lang_ind=lang_ind).transpose(1, 2)
 
-        lang_emb = self.lang_embedding(lang_ind)
-        x = self.embedding(x) + lang_emb
+        xemb = self.lang_embedding(lang_ind)
+        x = self.embedding(x)
+        x = torch.cat([x, xemb], dim=-1)
 
         x = x.transpose(1, 2)
         x = self.prenet(x)
@@ -239,8 +242,9 @@ class ForwardTacotron(nn.Module):
                       dur_hat: torch.Tensor,
                       pitch_hat: torch.Tensor,
                       energy_hat: torch.Tensor) -> Dict[str, torch.Tensor]:
-        lang_emb = self.lang_embedding(lang_inds)
-        x = self.embedding(x) + lang_emb
+        xemb = self.lang_embedding(lang_inds)
+        x = self.embedding(x)
+        x = torch.cat([x, xemb], dim=-1)
         x = x.transpose(1, 2)
 
         x = self.prenet(x)
