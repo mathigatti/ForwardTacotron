@@ -15,6 +15,7 @@ class SeriesPredictor(nn.Module):
 
     def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
+        self.lang_embedding = nn.Embedding(2, emb_dim)
         self.embedding = Embedding(num_chars, emb_dim)
         self.convs = torch.nn.ModuleList([
             BatchNormConv(emb_dim, conv_dims, 5, relu=True),
@@ -27,8 +28,10 @@ class SeriesPredictor(nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
+                lang_ind: torch.Tensor,
                 alpha: float = 1.0) -> torch.Tensor:
-        x = self.embedding(x)
+
+        x = self.embedding(x) + self.lang_embedding(lang_ind)
         x = x.transpose(1, 2)
         for conv in self.convs:
             x = conv(x)
@@ -149,9 +152,9 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        dur_hat = self.dur_pred(x).squeeze(-1)
-        pitch_hat = self.pitch_pred(x).transpose(1, 2)
-        energy_hat = self.energy_pred(x).transpose(1, 2)
+        dur_hat = self.dur_pred(x, lang_ind=lang_ind).squeeze(-1)
+        pitch_hat = self.pitch_pred(x, lang_ind=lang_ind).transpose(1, 2)
+        energy_hat = self.energy_pred(x, lang_ind=lang_ind).transpose(1, 2)
 
         lang_emb = self.lang_embedding(lang_ind)
         x = self.embedding(x) + lang_emb
@@ -197,18 +200,19 @@ class ForwardTacotron(nn.Module):
                  energy_function: Callable[[torch.Tensor], torch.Tensor] = lambda x: x) -> Dict[str, torch.Tensor]:
         self.eval()
         with torch.no_grad():
-            dur_hat = self.dur_pred(x, alpha=alpha)
+            lang_inds = torch.full(x.size(), fill_value=lang_ind, device=x.device).long()
+            dur_hat = self.dur_pred(x, lang_ind=lang_inds, alpha=alpha)
             dur_hat = dur_hat.squeeze(2)
             if torch.sum(dur_hat.long()) <= 0:
                 torch.fill_(dur_hat, value=2.)
-            pitch_hat = self.pitch_pred(x).transpose(1, 2)
+            pitch_hat = self.pitch_pred(x, lang_ind=lang_inds).transpose(1, 2)
             pitch_hat = pitch_function(pitch_hat)
-            energy_hat = self.energy_pred(x).transpose(1, 2)
+            energy_hat = self.energy_pred(x, lang_ind=lang_inds).transpose(1, 2)
             energy_hat = energy_function(energy_hat)
             return self._generate_mel(x=x, dur_hat=dur_hat,
                                       pitch_hat=pitch_hat,
                                       energy_hat=energy_hat,
-                                      lang_ind=lang_ind)
+                                      lang_inds=lang_inds)
 
     @torch.jit.export
     def generate_jit(self,
@@ -231,11 +235,10 @@ class ForwardTacotron(nn.Module):
 
     def _generate_mel(self,
                       x: torch.Tensor,
-                      lang_ind: int,
+                      lang_inds: torch.Tensor,
                       dur_hat: torch.Tensor,
                       pitch_hat: torch.Tensor,
                       energy_hat: torch.Tensor) -> Dict[str, torch.Tensor]:
-        lang_inds = torch.full(x.size(), fill_value=lang_ind, device=x.device).long()
         lang_emb = self.lang_embedding(lang_inds)
         x = self.embedding(x) + lang_emb
         x = x.transpose(1, 2)
