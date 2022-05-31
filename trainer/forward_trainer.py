@@ -208,7 +208,7 @@ class ForwardTrainer:
             tag='Ground_Truth_Aligned/postnet_wav', snd_tensor=m2_hat_wav,
             global_step=model.step, sample_rate=self.dsp.sample_rate)
 
-        gen = model.generate(batch['x'][0:1, :batch['x_len'][0]], model.de_emb.unsqueeze(0))
+        gen = model.generate(batch['x'][0:1, :batch['x_len'][0]], model.de_semb.unsqueeze(0))
         m1_hat = np_now(gen['mel'].squeeze())
         m2_hat = np_now(gen['mel_post'].squeeze())
 
@@ -233,7 +233,7 @@ class ForwardTrainer:
             tag='Generated/postnet_wav', snd_tensor=m2_hat_wav,
             global_step=model.step, sample_rate=self.dsp.sample_rate)
 
-        gen_en = model.generate(batch['x'][0:1, :batch['x_len'][0]], model.en_emb.unsqueeze(0))
+        gen_en = model.generate(batch['x'][0:1, :batch['x_len'][0]], model.en_semb.unsqueeze(0))
         m2_hat = np_now(gen_en['mel_post'].squeeze())
         m2_hat_fig = plot_mel(m2_hat)
         self.writer.add_figure('EN_Generated/postnet', m2_hat_fig, model.step)
