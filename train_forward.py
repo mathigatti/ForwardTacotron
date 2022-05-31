@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union
 
 import torch
+import tqdm
 from torch import optim
 from torch.nn import init
 from torch.utils.data.dataloader import DataLoader
@@ -74,10 +75,30 @@ if __name__ == '__main__':
     # Instantiate Forward TTS Model
     model = init_tts_model(config).to(device)
     print(f'\nInitialized tts model: {model}\n')
+
+
+    print('Loading semb')
+    sembs = list(paths.speaker_emb.glob('*.npy'))
+    en_semb, de_semb = [], []
+    for f in tqdm.tqdm(sembs, total=len(sembs)):
+        semb = np.load(f)
+        if f.stem.startswith('r_1'):
+            en_semb.append(semb)
+        else:
+            de_semb.append(semb)
+
+    print(f'Num de: {len(de_semb)}, en: {len(en_semb)}')
+    en_semb_avg = np.mean(np.stack(en_semb), axis=0)
+    de_semb_avg = np.mean(np.stack(de_semb), axis=0)
+    model.en_semb = torch.tensor(en_semb_avg).float()
+    model.de_semb = torch.tensor(de_semb_avg).float()
+
     optimizer = optim.Adam(model.parameters())
     restore_checkpoint(model=model, optim=optimizer,
                        path=paths.forward_checkpoints / 'latest_model.pt',
                        device=device)
+    print(f'en: {model.en_semb[:10]}')
+    print(f'de: {model.de_semb[:10]}')
 
     if force_gta:
         print('Creating Ground Truth Aligned Dataset...\n')
