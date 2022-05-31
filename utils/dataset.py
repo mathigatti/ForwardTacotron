@@ -265,6 +265,7 @@ class ForwardDataset(Dataset):
         dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
+        speaker_emb = np.load(str(self.path/'speaker_emb'/f'{item_id}.npy'))
 
         dur_hat = dur.copy()
         pitch_hat = pitch.copy()
@@ -282,7 +283,7 @@ class ForwardDataset(Dataset):
 
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
                 'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy,
-                'dur_hat': dur_hat, 'pitch_hat': pitch_hat}
+                'dur_hat': dur_hat, 'pitch_hat': pitch_hat, 'speaker_emb': speaker_emb}
 
     def __len__(self):
         return len(self.metadata)
@@ -314,6 +315,10 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     mel_lens = [b['mel_len'] for b in batch]
     mel_lens = torch.tensor(mel_lens)
 
+    speaker_emb = [b['speaker_emb'] for b in batch]
+    speaker_emb = np.stack(speaker_emb)
+    speaker_emb = torch.tensor(speaker_emb).float()
+
     dur, pitch, energy, dur_hat, pitch_hat = None, None, None, None, None
     if 'pitch_hat' in batch[0]:
         pitch_hat = [pad1d(b['pitch_hat'][:max_x_len], max_x_len) for b in batch]
@@ -338,7 +343,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
             'mel_len': mel_lens, 'dur': dur, 'pitch': pitch,
-            'energy': energy, 'dur_hat': dur_hat, 'pitch_hat': pitch_hat}
+            'energy': energy, 'dur_hat': dur_hat, 'pitch_hat': pitch_hat, 'speaker_emb': speaker_emb}
 
 
 class BinnedLengthSampler(Sampler):
