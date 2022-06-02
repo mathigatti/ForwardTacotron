@@ -4,6 +4,7 @@ from multiprocessing import Pool, cpu_count
 from random import Random
 
 import pyworld as pw
+from resemblyzer import VoiceEncoder, preprocess_wav
 
 from utils.display import *
 from utils.dsp import *
@@ -28,6 +29,7 @@ class DataPoint:
     mel: np.array = None
     quant: np.array = None
     pitch: np.array = None
+    path: Path = None
 
 
 class Preprocessor:
@@ -84,7 +86,8 @@ class Preprocessor:
                          mel_len=mel.shape[-1],
                          text=text,
                          quant=quant.astype(np.int64),
-                         pitch=pitch.astype(np.float32))
+                         pitch=pitch.astype(np.float32),
+                         path=path)
 
 
 parser = argparse.ArgumentParser(description='Preprocessing for WaveRNN and Tacotron')
@@ -103,7 +106,7 @@ if __name__ == '__main__':
     print(f'\n{len(wav_files)} .wav files found in "{args.path}"')
     assert len(wav_files) > 0, f'Found no wav files in {args.path}, exiting.'
 
-    text_dict = ljspeech(args.path)
+    text_dict, speaker_dict = ljspeech(args.path)
     text_dict = {item_id: text for item_id, text in text_dict.items()
                  if item_id in wav_ids and len(text) > config['preprocessing']['min_text_len']}
     wav_files = [w for w in wav_files if w.stem in text_dict]
@@ -131,11 +134,16 @@ if __name__ == '__main__':
                                 dsp=dsp,
                                 cleaner=cleaner,
                                 lang=config['preprocessing']['language'])
+    voice_encoder = VoiceEncoder()
 
     for i, dp in enumerate(pool.imap_unordered(preprocessor, wav_files), 1):
         if dp is not None and dp.item_id in text_dict:
             dataset += [(dp.item_id, dp.mel_len)]
             cleaned_texts += [(dp.item_id, dp.text)]
+            wav = preprocess_wav(dp.path)
+            emb = voice_encoder.embed_utterance(wav)
+            np.save(paths.speaker_emb / f'{dp.item_id}.npy', emb, allow_pickle=False)
+
         bar = progbar(i, len(wav_files))
         message = f'{bar} {i}/{len(wav_files)} '
         stream(message)
@@ -152,6 +160,7 @@ if __name__ == '__main__':
     text_dict = {id: text for id, text in cleaned_texts}
 
     pickle_binary(text_dict, paths.data/'text_dict.pkl')
+    pickle_binary(speaker_dict, paths.data/'speaker_dict.pkl')
     pickle_binary(train_dataset, paths.data/'train_dataset.pkl')
     pickle_binary(val_dataset, paths.data/'val_dataset.pkl')
 

@@ -236,9 +236,10 @@ class TacoDataset(Dataset):
         x = self.tokenizer(text)
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
+        speaker_emb = np.load(str(self.path/'speaker_emb'/f'{item_id}.npy'))
 
         return {'x': x, 'mel': mel, 'item_id': item_id,
-                'mel_len': mel_len, 'x_len': len(x)}
+                'mel_len': mel_len, 'x_len': len(x), 'speaker_emb': speaker_emb}
 
     def __len__(self):
         return len(self.metadata)
