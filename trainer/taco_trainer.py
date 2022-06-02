@@ -119,6 +119,7 @@ class TacoTrainer:
 
     def evaluate(self, model: Tacotron, val_set: Dataset) -> Tuple[float, float]:
         model.eval()
+        model.decoder.prenet.train()
         val_loss = 0
         val_att_score = 0
         device = next(model.parameters()).device
@@ -137,6 +138,7 @@ class TacoTrainer:
     @ignore_exception
     def generate_plots(self, model: Tacotron, session: TTSSession) -> None:
         model.eval()
+        model.decoder.prenet.train()
         device = next(model.parameters()).device
         batch = session.val_sample
         batch = to_device(batch, device=device)

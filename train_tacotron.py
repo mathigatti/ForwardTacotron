@@ -87,6 +87,7 @@ def create_gta_features(model: Tacotron,
                         val_set: DataLoader,
                         save_path: Path):
     model.eval()
+    model.decoder.prenet.train()
     device = next(model.parameters()).device  # use same device as model parameters
     iters = len(train_set) + len(val_set)
     dataset = itertools.chain(train_set, val_set)
