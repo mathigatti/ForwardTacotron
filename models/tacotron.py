@@ -281,7 +281,7 @@ class Tacotron(nn.Module):
         device = next(self.parameters()).device  # use same device as parameters
 
         if semb is None:
-            semb = torch.rand((1, x.size(1), self.semb_dim)).to(x.device)
+            semb = torch.rand((1, self.semb_dim)).to(x.device)
 
         batch_size = 1
 
