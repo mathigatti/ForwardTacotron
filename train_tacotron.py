@@ -40,7 +40,7 @@ def extract_pitch_energy(save_path_pitch: Path,
     speaker_dict = unpickle_binary(paths.data / 'speaker_dict.pkl')
 
     speaker_names = set(speaker_dict.values())
-    for speaker_name in speaker_names
+    for speaker_name in speaker_names:
         print(f'normalizing for {speaker_name}')
         train_data = unpickle_binary(paths.data / 'train_dataset.pkl')
         val_data = unpickle_binary(paths.data / 'val_dataset.pkl')
