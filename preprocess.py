@@ -138,11 +138,14 @@ if __name__ == '__main__':
 
     for i, dp in enumerate(pool.imap_unordered(preprocessor, wav_files), 1):
         if dp is not None and dp.item_id in text_dict:
-            dataset += [(dp.item_id, dp.mel_len)]
-            cleaned_texts += [(dp.item_id, dp.text)]
-            wav = preprocess_wav(dp.path)
-            emb = voice_encoder.embed_utterance(wav)
-            np.save(paths.speaker_emb / f'{dp.item_id}.npy', emb, allow_pickle=False)
+            try:
+                wav = preprocess_wav(dp.path)
+                emb = voice_encoder.embed_utterance(wav)
+                np.save(paths.speaker_emb / f'{dp.item_id}.npy', emb, allow_pickle=False)
+                dataset += [(dp.item_id, dp.mel_len)]
+                cleaned_texts += [(dp.item_id, dp.text)]
+            except Exception as e:
+                print(e)
 
         bar = progbar(i, len(wav_files))
         message = f'{bar} {i}/{len(wav_files)} '
