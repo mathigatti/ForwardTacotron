@@ -37,40 +37,47 @@ def normalize_values(phoneme_val):
 def extract_pitch_energy(save_path_pitch: Path,
                          save_path_energy: Path,
                          pitch_max_freq: float) -> Tuple[float, float]:
-    train_data = unpickle_binary(paths.data / 'train_dataset.pkl')
-    val_data = unpickle_binary(paths.data / 'val_dataset.pkl')
-    all_data = train_data + val_data
-    phoneme_pitches = []
-    phoneme_energies = []
-    for prog_idx, (item_id, mel_len) in enumerate(all_data, 1):
-        dur = np.load(paths.alg / f'{item_id}.npy')
-        mel = np.load(paths.mel / f'{item_id}.npy')
-        energy = np.linalg.norm(np.exp(mel), axis=0, ord=2)
-        assert np.sum(dur) == mel_len
-        pitch = np.load(paths.raw_pitch / f'{item_id}.npy')
-        durs_cum = np.cumsum(np.pad(dur, (1, 0)))
-        pitch_char = np.zeros((dur.shape[0],), dtype=np.float32)
-        energy_char = np.zeros((dur.shape[0],), dtype=np.float32)
-        for idx, a, b in zip(range(mel_len), durs_cum[:-1], durs_cum[1:]):
-            values = pitch[a:b][np.where(pitch[a:b] != 0.0)[0]]
-            values = values[np.where(values < pitch_max_freq)[0]]
-            pitch_char[idx] = np.mean(values) if len(values) > 0 else 0.0
-            energy_values = energy[a:b]
-            energy_char[idx] = np.mean(energy_values)if len(energy_values) > 0 else 0.0
-        phoneme_pitches.append((item_id, pitch_char))
-        phoneme_energies.append((item_id, energy_char))
-        bar = progbar(prog_idx, len(all_data))
-        msg = f'{bar} {prog_idx}/{len(all_data)} Files '
-        stream(msg)
+    speaker_dict = unpickle_binary(paths.data / 'speaker_dict.pkl')
 
-    for item_id, phoneme_energy in phoneme_energies:
-        np.save(str(save_path_energy / f'{item_id}.npy'), phoneme_energy, allow_pickle=False)
+    speaker_names = set(speaker_dict.values())
+    for speaker_name in speaker_names
+        print(f'normalizing for {speaker_name}')
+        train_data = unpickle_binary(paths.data / 'train_dataset.pkl')
+        val_data = unpickle_binary(paths.data / 'val_dataset.pkl')
+        all_data = train_data + val_data
+        all_data = [d for d in all_data if d[0] == speaker_name]
+        print(f'normalizing {len(all_data)} files.')
+        phoneme_pitches = []
+        phoneme_energies = []
+        for prog_idx, (item_id, mel_len) in enumerate(all_data, 1):
+            dur = np.load(paths.alg / f'{item_id}.npy')
+            mel = np.load(paths.mel / f'{item_id}.npy')
+            energy = np.linalg.norm(np.exp(mel), axis=0, ord=2)
+            assert np.sum(dur) == mel_len
+            pitch = np.load(paths.raw_pitch / f'{item_id}.npy')
+            durs_cum = np.cumsum(np.pad(dur, (1, 0)))
+            pitch_char = np.zeros((dur.shape[0],), dtype=np.float32)
+            energy_char = np.zeros((dur.shape[0],), dtype=np.float32)
+            for idx, a, b in zip(range(mel_len), durs_cum[:-1], durs_cum[1:]):
+                values = pitch[a:b][np.where(pitch[a:b] != 0.0)[0]]
+                values = values[np.where(values < pitch_max_freq)[0]]
+                pitch_char[idx] = np.mean(values) if len(values) > 0 else 0.0
+                energy_values = energy[a:b]
+                energy_char[idx] = np.mean(energy_values)if len(energy_values) > 0 else 0.0
+            phoneme_pitches.append((item_id, pitch_char))
+            phoneme_energies.append((item_id, energy_char))
+            bar = progbar(prog_idx, len(all_data))
+            msg = f'{bar} {prog_idx}/{len(all_data)} Files '
+            stream(msg)
 
-    mean, var = normalize_values(phoneme_pitches)
-    for item_id, phoneme_pitch in phoneme_pitches:
-        np.save(str(save_path_pitch / f'{item_id}.npy'), phoneme_pitch, allow_pickle=False)
+        for item_id, phoneme_energy in phoneme_energies:
+            np.save(str(save_path_energy / f'{item_id}.npy'), phoneme_energy, allow_pickle=False)
 
-    print(f'\nPitch mean: {mean} var: {var}')
+        mean, var = normalize_values(phoneme_pitches)
+        for item_id, phoneme_pitch in phoneme_pitches:
+            np.save(str(save_path_pitch / f'{item_id}.npy'), phoneme_pitch, allow_pickle=False)
+
+        print(f'\nPitch mean: {mean} var: {var}')
 
     return mean, var
 
