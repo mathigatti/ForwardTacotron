@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_resemblyzer'
+tts_model_id: 'bild_multispeaker_resemblyzer'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
@@ -22,7 +22,7 @@ dsp:
                                         # start and end silences with librosa (no trimming if really high)
   pitch_max_freq: 400                   # Maximum value for pitch frequency to remove outliers (Common pitch range is
                                         # about 60-300)
-  trim_long_silences: False             # Whether to reduce long silence using WebRTC Voice Activity Detector
+  trim_long_silences: True             # Whether to reduce long silence using WebRTC Voice Activity Detector
   vad_window_length: 30                 # In milliseconds
   vad_moving_average_width: 8
   vad_max_silence_length: 12
@@ -37,7 +37,7 @@ dsp:
 preprocessing:
 
   seed: 42
-  n_val: 200
+  n_val: 500
   language: 'de'
   cleaner_name: 'no_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
   use_phonemes: False                 # whether to phonemize the text

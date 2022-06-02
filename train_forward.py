@@ -19,7 +19,7 @@ from utils.checkpoints import restore_checkpoint, init_tts_model
 from utils.dataset import get_tts_datasets
 from utils.display import *
 from utils.dsp import DSP
-from utils.files import read_config
+from utils.files import read_config, unpickle_binary
 from utils.paths import Paths
 
 
@@ -73,32 +73,38 @@ if __name__ == '__main__':
     print('Using device:', device)
 
     # Instantiate Forward TTS Model
+    speaker_dict = unpickle_binary('data/speaker_dict.pkl')
+    speaker_names = {s for s in speaker_dict.values()}
+    config['speaker_names'] = speaker_names
     model = init_tts_model(config).to(device)
     print(f'\nInitialized tts model: {model}\n')
 
-
     print('Loading semb')
     sembs = list(paths.speaker_emb.glob('*.npy'))
-    en_semb, de_semb = [], []
-    for f in tqdm.tqdm(sembs, total=len(sembs)):
-        semb = np.load(f)
-        if f.stem.startswith('r_1'):
-            en_semb.append(semb)
-        else:
-            de_semb.append(semb)
 
-    print(f'Num de: {len(de_semb)}, en: {len(en_semb)}')
-    en_semb_avg = np.mean(np.stack(en_semb), axis=0)
-    de_semb_avg = np.mean(np.stack(de_semb), axis=0)
-    model.en_semb = torch.tensor(en_semb_avg).float()
-    model.de_semb = torch.tensor(de_semb_avg).float()
+    print(f'Speaker names: {speaker_names}')
+    speaker_emb = {name: np.zeros(256) for name in speaker_names}
+    speaker_norm = {name: 0 for name in speaker_names}
+
+    for f in tqdm.tqdm(sembs, total=len(sembs)):
+        item_id = f.stem
+        speaker_name = speaker_dict[item_id]
+        emb = np.load(paths.speaker_emb / f'{item_id}.npy')
+        speaker_emb[speaker_name] += emb
+        speaker_norm[speaker_name] *= 1
+
+    for speaker_name in speaker_names:
+        emb = speaker_emb[speaker_name] / speaker_norm[speaker_name]
+        model.speaker_name = torch.tensor(emb).float()
+
+    print('model speaker name embs:')
+    for speaker_name in speaker_names:
+        print(speaker_name, model.speaker_name[:10])
 
     optimizer = optim.Adam(model.parameters())
     restore_checkpoint(model=model, optim=optimizer,
                        path=paths.forward_checkpoints / 'latest_model.pt',
                        device=device)
-    print(f'en: {model.en_semb[:10]}')
-    print(f'de: {model.de_semb[:10]}')
 
     if force_gta:
         print('Creating Ground Truth Aligned Dataset...\n')

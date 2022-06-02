@@ -50,7 +50,7 @@ class Preprocessor:
         try:
             dp = self._convert_file(path)
             np.save(self.paths.mel/f'{dp.item_id}.npy', dp.mel, allow_pickle=False)
-            np.save(self.paths.quant/f'{dp.item_id}.npy', dp.quant, allow_pickle=False)
+            #np.save(self.paths.quant/f'{dp.item_id}.npy', dp.quant, allow_pickle=False)
             np.save(self.paths.raw_pitch/f'{dp.item_id}.npy', dp.pitch, allow_pickle=False)
             return dp
         except Exception as e:
