@@ -36,8 +36,7 @@ def normalize_values(phoneme_val):
 # 0b27e359a5869cd23294c1707c92f989c0bf201e/PyTorch/SpeechSynthesis/FastPitch/extract_mels.py
 def extract_pitch_energy(save_path_pitch: Path,
                          save_path_energy: Path,
-                         pitch_max_freq: float,
-                         speaker_names) -> Tuple[float, float]:
+                         pitch_max_freq: float) -> Tuple[float, float]:
     speaker_dict = unpickle_binary(paths.data / 'speaker_dict.pkl')
 
     speaker_names = set(speaker_dict.keys())
