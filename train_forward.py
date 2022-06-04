@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # Instantiate Forward TTS Model
     speaker_dict = unpickle_binary('data/speaker_dict.pkl')
-    speaker_names = {s for s in speaker_dict.values()}
+    speaker_names = {s for s in speaker_dict.values() if len(s) > 1}
     config['speaker_names'] = speaker_names
     model = init_tts_model(config).to(device)
     print(f'\nInitialized tts model: {model}\n')
