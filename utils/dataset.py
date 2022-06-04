@@ -274,13 +274,13 @@ class ForwardDataset(Dataset):
         for i, (t, d) in enumerate(zip(text, dur_hat[:])):
             if t == ',' and i < len(dur_hat) - 1:
                 dur_hat[i+1] = max(dur_hat[i+1], 15)
-        if text.endswith('?'):
-            if pitch_hat[-3] - pitch_hat[-4] < 0.5:
-                pitch_hat[-3] = pitch_hat[-4] + 0.5
-            if pitch_hat[-2] - pitch_hat[-3] < 0.5:
-                pitch_hat[-2] = pitch_hat[-3] + 0.5
-            if pitch_hat[-1] - pitch_hat[-2] < 1:
-                pitch_hat[-1] = pitch_hat[-2] + 1
+        #if text.endswith('?'):
+        #    if pitch_hat[-3] - pitch_hat[-4] < 0.5:
+        #        pitch_hat[-3] = pitch_hat[-4] + 0.5
+        #    if pitch_hat[-2] - pitch_hat[-3] < 0.5:
+        #        pitch_hat[-2] = pitch_hat[-3] + 0.5
+        #    if pitch_hat[-1] - pitch_hat[-2] < 1:
+        #        pitch_hat[-1] = pitch_hat[-2] + 1
 
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
                 'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy,
