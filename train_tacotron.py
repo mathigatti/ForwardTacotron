@@ -36,11 +36,11 @@ def normalize_values(phoneme_val):
 # 0b27e359a5869cd23294c1707c92f989c0bf201e/PyTorch/SpeechSynthesis/FastPitch/extract_mels.py
 def extract_pitch_energy(save_path_pitch: Path,
                          save_path_energy: Path,
-                         pitch_max_freq: float,
-                         speaker_names) -> Tuple[float, float]:
+                         pitch_max_freq: float) -> Tuple[float, float]:
     speaker_dict = unpickle_binary(paths.data / 'speaker_dict.pkl')
 
-    #speaker_names = set(speaker_dict.keys())
+
+    speaker_names = set([v for v in speaker_dict.values() if len(v) > 1])
     for speaker_name in speaker_names:
         print(f'normalizing for {speaker_name}')
         train_data = unpickle_binary(paths.data / 'train_dataset.pkl')
@@ -168,7 +168,7 @@ if __name__ == '__main__':
         print('Extracting Pitch and Energy Values...')
         mean, var = extract_pitch_energy(save_path_pitch=paths.phon_pitch,
                                          save_path_energy=paths.phon_energy,
-                                         pitch_max_freq=dsp.pitch_max_freq, speaker_names=config['speaker_names'])
+                                         pitch_max_freq=dsp.pitch_max_freq)
         print('\n\nYou can now train ForwardTacotron - use python train_forward.py\n')
         exit()
 
