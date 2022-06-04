@@ -106,7 +106,7 @@ if __name__ == '__main__':
         torch.tensor(emb).float().to(device)
         print(emb)
 
-        model.speaker_name[...] = emb[...]
+        setattr(model, speaker_name, emb)
 
     print('model speaker name embs:')
     for speaker_name in speaker_names:
