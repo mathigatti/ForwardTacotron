@@ -91,7 +91,7 @@ if __name__ == '__main__':
         speaker_name = speaker_dict[item_id]
         emb = np.load(paths.speaker_emb / f'{item_id}.npy')
         speaker_emb[speaker_name] += emb
-        speaker_norm[speaker_name] *= 1
+        speaker_norm[speaker_name] += 1
 
     for speaker_name in speaker_names:
         emb = speaker_emb[speaker_name] / speaker_norm[speaker_name]
