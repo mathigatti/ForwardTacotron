@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     print('model speaker name embs:')
     for speaker_name in speaker_names:
-        print(speaker_name, model.speaker_name)
+        print(speaker_name, getattr(model, speaker_name))
 
     if force_gta:
         print('Creating Ground Truth Aligned Dataset...\n')
