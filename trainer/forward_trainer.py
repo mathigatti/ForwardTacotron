@@ -211,7 +211,7 @@ class ForwardTrainer:
         speaker_names = self.config['speaker_names']
         for speaker_name in speaker_names:
             speaker_emb = getattr(model, speaker_name).unsqueeze(0)
-            gen = model.generate(batch['x'][0:1, :batch['x_len'][0]], semb=speaker_emb).to(device)
+            gen = model.generate(batch['x'][0:1, :batch['x_len'][0]], semb=speaker_emb)
             m1_hat = np_now(gen['mel'].squeeze())
             m2_hat = np_now(gen['mel_post'].squeeze())
 
