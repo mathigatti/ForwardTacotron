@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     print(f'Speaker names: {speaker_names}')
     speaker_emb = {name: np.zeros(256) for name in speaker_names}
-    speaker_norm = {name: 0 for name in speaker_names}
+    speaker_norm = {name: 0. for name in speaker_names}
 
     for f in tqdm.tqdm(sembs, total=len(sembs)):
         item_id = f.stem
@@ -93,18 +93,18 @@ if __name__ == '__main__':
         speaker_emb[speaker_name] += emb
         speaker_norm[speaker_name] += 1
 
+    optimizer = optim.Adam(model.parameters())
+    restore_checkpoint(model=model, optim=optimizer,
+                       path=paths.forward_checkpoints / 'latest_model.pt',
+                       device=device)
+
     for speaker_name in speaker_names:
         emb = speaker_emb[speaker_name] / speaker_norm[speaker_name]
         model.speaker_name = torch.tensor(emb).float()
 
     print('model speaker name embs:')
     for speaker_name in speaker_names:
-        print(speaker_name, model.speaker_name[:10])
-
-    optimizer = optim.Adam(model.parameters())
-    restore_checkpoint(model=model, optim=optimizer,
-                       path=paths.forward_checkpoints / 'latest_model.pt',
-                       device=device)
+        print(speaker_name, model.speaker_name)
 
     if force_gta:
         print('Creating Ground Truth Aligned Dataset...\n')
