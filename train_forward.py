@@ -99,7 +99,11 @@ if __name__ == '__main__':
                        device=device)
 
     for speaker_name in speaker_names:
+        print(speaker_name)
+        print(speaker_emb[speaker_name])
+        print(speaker_norm[speaker_name])
         emb = speaker_emb[speaker_name] / speaker_norm[speaker_name]
+
         model.speaker_name = torch.tensor(emb).float()
 
     print('model speaker name embs:')
