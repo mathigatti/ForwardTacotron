@@ -3,7 +3,7 @@ voc_model_id: 'ljspeech_voc'
 tts_model_id: 'ljspeech_tts'
 data_path: 'data/'                                        # output data path
 
-tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
+tts_model: 'fast_pitch'                             # choices: [forward_tacotron, fast_pitch]
 
 
 dsp:
@@ -38,8 +38,8 @@ preprocessing:
 
   seed: 42
   n_val: 200
-  language: 'en-us'
-  cleaner_name: 'english_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
+  language: 'es'
+  cleaner_name: 'no_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
   use_phonemes: True                 # whether to phonemize the text
                                      # if set to False, you have to provide the phonemized text yourself
   min_text_len: 2
@@ -168,9 +168,9 @@ fast_pitch:
 
   training:
     schedule:
-      - 1e-5,  5_000,  32         # progressive training schedule
-      - 5e-5,  100_000,  32       # lr, step, batch_size
-      - 2e-5,  300_000,  32
+      - 1e-5,  5_000,  8         # progressive training schedule
+      - 5e-5,  100_000,  8       # lr, step, batch_size
+      - 2e-5,  300_000,  8
     dur_loss_factor: 0.1
     pitch_loss_factor: 0.1
     energy_loss_factor: 0.1
